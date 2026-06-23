@@ -4,6 +4,8 @@ Launch is a native macOS Launchpad replacement. The app uses SwiftUI for the
 launcher surface, AppKit for process/window/event integration, and a small
 `LaunchCore` module for pure rules that can be checked without a GUI.
 
+Implementation phases live in `docs/PHASES.md`.
+
 ## References
 
 Official Apple APIs:
@@ -290,4 +292,3 @@ Do not add:
   Keep the public `NSEvent` fallback.
 - `UserDefaults` is enough for MVP layout data.
   Move to JSON files only when import/export or user-visible backup exists.
-
