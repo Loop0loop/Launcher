@@ -7,8 +7,12 @@ struct LauncherView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let layout = LaunchpadLayoutMetrics(size: geometry.size)
-            let showsPageControl = state.query.isEmpty
+            let layout = LaunchpadLayoutMetrics(
+                size: geometry.size,
+                columns: state.gridLayout.columns,
+                rows: state.gridLayout.rows
+            )
+            let showsPageControl = state.query.isEmpty && state.pageCount > 1
             let columns = Array(
                 repeating: GridItem(.fixed(layout.columnWidth), spacing: layout.gridColumnSpacing),
                 count: layout.columns

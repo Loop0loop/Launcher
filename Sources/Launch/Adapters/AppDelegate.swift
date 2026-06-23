@@ -205,10 +205,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             state.moveSelection(by: 1)
             return nil
         case 125:
-            state.moveSelection(by: LaunchConstants.Launcher.columns)
+            state.moveSelection(by: state.gridColumns)
             return nil
         case 126:
-            state.moveSelection(by: -LaunchConstants.Launcher.columns)
+            state.moveSelection(by: -state.gridColumns)
             return nil
         default:
             guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty,

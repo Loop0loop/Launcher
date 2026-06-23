@@ -16,6 +16,7 @@ struct SettingsView: View {
                     settingsHeader
 
                     appearanceSection
+                    gridLayoutSection
                     generalSection
                     appSourcesSection
                     permissionsSection
@@ -62,6 +63,17 @@ struct SettingsView: View {
                 range: LaunchConstants.Appearance.minFolderDim...LaunchConstants.Appearance.maxFolderDim,
                 displayValue: "\(Int((state.appearance.folderDimOpacity * 100).rounded()))%"
             )
+        }
+    }
+
+    private var gridLayoutSection: some View {
+        SettingsGlassSection(title: LaunchConstants.Settings.gridLayoutSection) {
+            Picker(LaunchConstants.Settings.gridPreset, selection: $state.gridLayout) {
+                ForEach(GridLayoutSettings.presets) { preset in
+                    Text(preset.label).tag(preset)
+                }
+            }
+            .pickerStyle(.segmented)
         }
     }
 

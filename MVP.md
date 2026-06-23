@@ -65,7 +65,7 @@ Run: `Scripts/build-app.sh`, then open `.build/Launch.app`.
 - [x] F4 key launch
 - [x] Quick right-click menu
 - [x] Custom app sources
-- [ ] Customizable grid layout
+- [x] Customizable grid layout
 - [ ] Hot corners
 - [ ] Drag apps to Dock
 - [ ] Import native Launchpad layout

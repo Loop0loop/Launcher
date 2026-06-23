@@ -24,6 +24,14 @@ final class AppState: ObservableObject {
     @Published var trackpadGateState: TrackpadGateState = .unknown
     @Published var launcherVisible = false
     @Published var appSourcePaths = AppSourceStore.load()
+    @Published var gridLayout = GridLayoutStore.load() {
+        didSet {
+            guard oldValue != gridLayout else { return }
+            GridLayoutStore.save(gridLayout)
+            currentPage = min(currentPage, pageCount - 1)
+            ensureSelection()
+        }
+    }
     @Published var appearance = AppearanceStore.load() {
         didSet {
             guard oldValue != appearance else { return }
@@ -33,7 +41,6 @@ final class AppState: ObservableObject {
     @Published private var order: [String] = []
 
     private let layoutStore = LayoutStore()
-    private let pageSize = LaunchConstants.Launcher.pageSize
     private var pageBeforeSearch = 0
     private var selectionBeforeSearch: String?
     var closeLauncher: (() -> Void)?
@@ -75,6 +82,14 @@ final class AppState: ObservableObject {
 
     var pageCount: Int {
         max(1, Int(ceil(Double(visibleItems.count) / Double(pageSize))))
+    }
+
+    var gridColumns: Int {
+        gridLayout.columns
+    }
+
+    private var pageSize: Int {
+        gridLayout.pageSize
     }
 
     var pageItems: [LauncherItem] {

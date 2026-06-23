@@ -3,9 +3,8 @@ import CoreGraphics
 /// Screen-relative layout tuned to match native macOS Launchpad proportions.
 struct LaunchpadLayoutMetrics {
     let size: CGSize
-
-    let columns = LaunchConstants.Launcher.columns
-    let rows = LaunchConstants.Launcher.rows
+    var columns = LaunchConstants.Launcher.columns
+    var rows = LaunchConstants.Launcher.rows
 
     var horizontalPadding: CGFloat {
         max(LaunchConstants.Launcher.minHorizontalPadding, size.width * LaunchConstants.Launcher.horizontalPaddingRatio)
