@@ -65,16 +65,12 @@ Dependency rule:
 - Adapters are the only place for AppKit/system side effects.
 - Views do not scan apps, write persistence, or talk to global monitors.
 
-Current pragmatic exception:
-
-- `Sources/Launch/main.swift` contains Presentation, State, and Adapters in one
-  file because the MVP is still small. Split only when the file blocks work.
-
-Next split, when needed:
+Current file boundaries:
 
 ```text
-Sources/Launch/AppState.swift
-Sources/Launch/Views/*.swift
+Sources/Launch/main.swift
+Sources/Launch/State/*.swift
+Sources/Launch/Presentation/*.swift
 Sources/Launch/Adapters/*.swift
 Sources/LaunchCore/*.swift
 ```
@@ -144,7 +140,8 @@ the menu bar or trackpad.
 
 ```text
 menu/gesture
-  -> AppDelegate.showLauncher
+  -> AppDelegate
+  -> LauncherLifecycle.show
   -> remember frontmost app
   -> clear search
   -> resize window to current screen
@@ -156,7 +153,8 @@ menu/gesture
 
 ```text
 ESC/spread/toggle
-  -> AppDelegate.hideLauncher
+  -> AppDelegate
+  -> LauncherLifecycle.hide
   -> order launcher window out
   -> reactivate previous app
 ```
@@ -286,8 +284,8 @@ Do not add:
 
 ## Known Architecture Debt
 
-- `Sources/Launch/main.swift` is doing too much.
-  Split when the next feature needs touching multiple unrelated sections.
+- `AppState` still owns several user actions and adapter callbacks.
+  Split further only when one action needs a second implementation.
 - Private MultitouchSupport is best-effort.
   Keep the public `NSEvent` fallback.
 - `UserDefaults` is enough for MVP layout data.

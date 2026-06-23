@@ -85,11 +85,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             case .open:
                 self.launcherLifecycle?.show()
             case .close:
-                self.launcherLifecycle?.hide()
+                if self.launcherLifecycle?.isVisible == true {
+                    self.launcherLifecycle?.hide()
+                }
             case .previousPage:
-                self.state.changePage(-1)
+                if self.launcherLifecycle?.isVisible == true {
+                    self.state.changePage(-1)
+                }
             case .nextPage:
-                self.state.changePage(1)
+                if self.launcherLifecycle?.isVisible == true {
+                    self.state.changePage(1)
+                }
             }
         }
     }

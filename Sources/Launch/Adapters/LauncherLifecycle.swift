@@ -26,6 +26,8 @@ final class LauncherLifecycle {
     }
 
     func show() {
+        guard !state.launcherVisible else { return }
+
         dismissToken += 1
         let frontmost = NSWorkspace.shared.frontmostApplication
         if frontmost?.processIdentifier != NSRunningApplication.current.processIdentifier {
