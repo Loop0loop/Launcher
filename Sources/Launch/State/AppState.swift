@@ -21,6 +21,7 @@ final class AppState: ObservableObject {
     private let foldersKey = "folders"
     var closeLauncher: (() -> Void)?
     var dismissLauncher: (() -> Void)?
+    var launchApp: ((LaunchApp) -> Void)?
 
     init() {
         loadFolders()
@@ -67,8 +68,7 @@ final class AppState: ObservableObject {
     }
 
     func launch(_ app: LaunchApp) {
-        AppSystemAdapter.launch(app)
-        dismissLauncher?()
+        launchApp?(app)
     }
 
     func move(_ id: String, before targetID: String) {

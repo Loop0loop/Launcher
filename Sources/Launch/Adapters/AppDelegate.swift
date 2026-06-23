@@ -6,16 +6,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let state = AppState()
     let trackpadMonitor = TrackpadGestureMonitor()
     var window: NSWindow?
+    var launcherLifecycle: LauncherLifecycle?
     var settingsWindow: NSWindow?
     var statusItem: NSStatusItem?
-    var previousApp: NSRunningApplication?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
         makeWindow()
         makeStatusItem()
-        state.closeLauncher = { [weak self] in self?.hideLauncher() }
-        state.dismissLauncher = { [weak self] in self?.dismissLauncher() }
         state.requestAccessibilityPermission()
         startTrackpadMonitor()
     }
@@ -34,6 +32,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         window.backgroundColor = .clear
         window.level = .mainMenu
         self.window = window
+        launcherLifecycle = LauncherLifecycle(state: state, window: window)
+        state.closeLauncher = { [weak self] in self?.launcherLifecycle?.hide() }
+        state.dismissLauncher = { [weak self] in self?.launcherLifecycle?.dismiss() }
+        state.launchApp = { [weak self] app in self?.launcherLifecycle?.launch(app) }
     }
 
     func makeStatusItem() {
@@ -49,35 +51,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc func toggleLauncher() {
-        if window?.isVisible == true {
-            hideLauncher()
-        } else {
-            showLauncher()
-        }
-    }
-
-    func showLauncher() {
-        let frontmost = NSWorkspace.shared.frontmostApplication
-        if frontmost?.processIdentifier != NSRunningApplication.current.processIdentifier {
-            previousApp = frontmost
-        }
-        state.query = ""
-        window?.setFrame(NSScreen.main?.frame ?? window?.frame ?? .zero, display: true)
-        window?.makeKeyAndOrderFront(nil)
-        NSApp.activate(ignoringOtherApps: true)
-    }
-
-    func hideLauncher() {
-        dismissLauncher()
-        if #available(macOS 14.0, *) {
-            previousApp?.activate()
-        } else {
-            previousApp?.activate(options: [.activateIgnoringOtherApps])
-        }
-    }
-
-    func dismissLauncher() {
-        window?.orderOut(nil)
+        launcherLifecycle?.toggle()
     }
 
     @objc func refreshApps() {
@@ -107,9 +81,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             guard let self else { return }
             switch intent {
             case .open:
-                self.showLauncher()
+                self.launcherLifecycle?.show()
             case .close:
-                self.hideLauncher()
+                self.launcherLifecycle?.hide()
             case .previousPage:
                 self.state.changePage(-1)
             case .nextPage:
@@ -118,4 +92,3 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 }
-
