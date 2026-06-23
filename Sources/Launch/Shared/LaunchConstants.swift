@@ -45,6 +45,7 @@ enum LaunchConstants {
         static let removeAppSource = "Remove"
         static let gridPreset = "Grid"
         static let importNativeLayout = "Import Native Launchpad Layout"
+        static let displayMode = "Display Mode"
 
         static let width: CGFloat = 420
         static let height: CGFloat = 560
@@ -68,6 +69,7 @@ enum LaunchConstants {
         static let foldersKey = "folders"
         static let appSourcesKey = "appSources"
         static let gridLayoutKey = "gridLayout"
+        static let displayModeKey = "displayMode"
     }
 
     enum Launcher {

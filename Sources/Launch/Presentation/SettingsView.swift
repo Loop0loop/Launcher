@@ -74,6 +74,13 @@ struct SettingsView: View {
                 }
             }
             .pickerStyle(.segmented)
+
+            Picker(LaunchConstants.Settings.displayMode, selection: $state.displayMode) {
+                ForEach(LauncherDisplayMode.allCases) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
         }
     }
 

@@ -32,6 +32,13 @@ final class AppState: ObservableObject {
             ensureSelection()
         }
     }
+    @Published var displayMode = LauncherDisplayModeStore.load() {
+        didSet {
+            guard oldValue != displayMode else { return }
+            LauncherDisplayModeStore.save(displayMode)
+            currentPage = 0
+        }
+    }
     @Published var appearance = AppearanceStore.load() {
         didSet {
             guard oldValue != appearance else { return }
@@ -166,6 +173,10 @@ final class AppState: ObservableObject {
         } else {
             closeLauncher?()
         }
+    }
+
+    func dismissFromBackground() {
+        handleEscape()
     }
 
     func moveSelection(by delta: Int) {

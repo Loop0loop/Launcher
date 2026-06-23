@@ -2,6 +2,16 @@ import LaunchCore
 import SwiftUI
 import UniformTypeIdentifiers
 
+private struct LauncherDismissArea: View {
+    let action: () -> Void
+
+    var body: some View {
+        Color.clear
+            .contentShape(Rectangle())
+            .onTapGesture(perform: action)
+    }
+}
+
 struct LauncherView: View {
     @ObservedObject var state: AppState
 
@@ -12,7 +22,7 @@ struct LauncherView: View {
                 columns: state.gridLayout.columns,
                 rows: state.gridLayout.rows
             )
-            let showsPageControl = state.query.isEmpty && state.pageCount > 1
+            let showsPageControl = state.query.isEmpty && state.displayMode == .paged && state.pageCount > 1
             let columns = Array(
                 repeating: GridItem(.fixed(layout.columnWidth), spacing: layout.gridColumnSpacing),
                 count: layout.columns
@@ -25,35 +35,47 @@ struct LauncherView: View {
                     .onTapGesture { state.handleEscape() }
 
                 VStack(spacing: 0) {
-                    Color.clear.frame(height: layout.safeTopInset)
+                    LauncherDismissArea { state.dismissFromBackground() }
+                        .frame(height: layout.safeTopInset)
 
-                    LauncherSearchField(query: $state.query, isVisible: state.launcherVisible)
-                        .frame(height: layout.searchBarHeight)
+                    LauncherSearchField(
+                        query: $state.query,
+                        isVisible: state.launcherVisible,
+                        onBackgroundTap: { state.dismissFromBackground() }
+                    )
+                    .frame(height: layout.searchBarHeight)
 
-                    Color.clear.frame(height: layout.searchToGridGap)
+                    LauncherDismissArea { state.dismissFromBackground() }
+                        .frame(height: layout.searchToGridGap)
 
-                    if state.query.isEmpty {
-                        PagedGridView(
-                            state: state,
-                            layout: layout,
-                            columns: columns,
-                            pageWidth: geometry.size.width,
-                            gridHeight: gridHeight
-                        )
-                        .frame(height: gridHeight)
-                    } else {
-                        searchResultsGrid(layout: layout, columns: columns)
-                            .frame(height: gridHeight)
+                    ZStack {
+                        LauncherDismissArea { state.dismissFromBackground() }
+
+                        if state.query.isEmpty, state.displayMode == .paged {
+                            PagedGridView(
+                                state: state,
+                                layout: layout,
+                                columns: columns,
+                                pageWidth: geometry.size.width,
+                                gridHeight: gridHeight,
+                                onBackgroundTap: { state.dismissFromBackground() }
+                            )
+                        } else {
+                            searchResultsGrid(layout: layout, columns: columns)
+                        }
                     }
+                    .frame(height: gridHeight)
 
                     if showsPageControl {
-                        Color.clear.frame(height: layout.gridToPagerGap)
+                        LauncherDismissArea { state.dismissFromBackground() }
+                            .frame(height: layout.gridToPagerGap)
 
                         LauncherPageControl(state: state)
                             .frame(height: layout.pageControlHeight)
                     }
 
-                    Color.clear.frame(height: layout.safeBottomInset)
+                    LauncherDismissArea { state.dismissFromBackground() }
+                        .frame(height: layout.safeBottomInset)
                 }
                 .frame(width: geometry.size.width, height: geometry.size.height)
 
@@ -92,28 +114,34 @@ struct PagedGridView: View {
     let columns: [GridItem]
     let pageWidth: CGFloat
     let gridHeight: CGFloat
+    var onBackgroundTap: () -> Void = {}
 
     @State private var dragOffset: CGFloat = 0
     @State private var dragStartPage = 0
     @State private var pageLockedUntil = Date.distantPast
 
     var body: some View {
-        HStack(spacing: 0) {
-            ForEach(0..<state.pageCount, id: \.self) { page in
-                LazyVGrid(columns: columns, spacing: layout.gridRowSpacing) {
-                    ForEach(state.items(forPage: page)) { item in
-                        LauncherItemView(item: item, state: state, layout: layout)
+        ZStack {
+            LauncherDismissArea(action: onBackgroundTap)
+
+            HStack(spacing: 0) {
+                ForEach(0..<state.pageCount, id: \.self) { page in
+                    LazyVGrid(columns: columns, spacing: layout.gridRowSpacing) {
+                        ForEach(state.items(forPage: page)) { item in
+                            LauncherItemView(item: item, state: state, layout: layout)
+                        }
                     }
+                    .frame(width: pageWidth, height: gridHeight, alignment: .top)
                 }
-                .frame(width: pageWidth, height: gridHeight, alignment: .top)
             }
+            .offset(x: pageOffset)
+            .frame(width: pageWidth, alignment: .leading)
+            .animation(isDragging ? nil : LaunchConstants.Animation.spring, value: state.currentPage)
+            .animation(isDragging ? nil : LaunchConstants.Animation.spring, value: dragOffset)
+            .clipped()
         }
-        .offset(x: pageOffset)
-        .frame(width: pageWidth, alignment: .leading)
-        .animation(isDragging ? nil : LaunchConstants.Animation.spring, value: state.currentPage)
-        .animation(isDragging ? nil : LaunchConstants.Animation.spring, value: dragOffset)
+        .frame(height: gridHeight)
         .gesture(pageDragGesture)
-        .clipped()
     }
 
     private var isDragging: Bool {
@@ -178,29 +206,29 @@ struct PagedGridView: View {
 struct LauncherSearchField: View {
     @Binding var query: String
     let isVisible: Bool
+    var onBackgroundTap: () -> Void = {}
     @FocusState private var focused: Bool
 
     var body: some View {
         HStack(spacing: 0) {
-            Spacer(minLength: 0)
+            LauncherDismissArea(action: onBackgroundTap)
 
-            HStack(spacing: 10) {
+            HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.72))
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.75))
 
                 TextField(LaunchConstants.Launcher.searchPlaceholder, text: $query)
                     .textFieldStyle(.plain)
                     .font(.system(size: LaunchConstants.Launcher.searchFontSize, weight: .regular))
-                    .foregroundStyle(.white.opacity(0.95))
+                    .foregroundStyle(.white)
                     .focused($focused)
             }
             .padding(.horizontal, LaunchConstants.Launcher.searchHorizontalPadding)
             .frame(width: LaunchConstants.Launcher.searchWidth, height: LaunchConstants.Launcher.searchHeight)
-            .launcherSearchChrome()
-            .shadow(color: .black.opacity(0.35), radius: 10, y: 4)
+            .launchpadSearchChrome()
 
-            Spacer(minLength: 0)
+            LauncherDismissArea(action: onBackgroundTap)
         }
         .frame(maxWidth: .infinity)
         .onAppear { focused = true }
@@ -214,58 +242,24 @@ struct LauncherPageControl: View {
     @ObservedObject var state: AppState
 
     var body: some View {
-        HStack(spacing: LaunchConstants.Launcher.pageControlSpacing) {
-            pageNavButton(systemName: "chevron.left", enabled: state.currentPage > 0) {
-                withAnimation(LaunchConstants.Animation.spring) {
-                    state.changePage(-1)
-                }
-            }
-
-            HStack(spacing: LaunchConstants.Launcher.pageDotSpacing) {
-                ForEach(0..<state.pageCount, id: \.self) { page in
-                    Circle()
-                        .fill(page == state.currentPage ? .white : .white.opacity(LaunchConstants.Launcher.inactivePageOpacity))
-                        .frame(
-                            width: LaunchConstants.Launcher.pageDotSize,
-                            height: LaunchConstants.Launcher.pageDotSize
-                        )
-                        .scaleEffect(page == state.currentPage ? LaunchConstants.Launcher.pageIndicatorActiveScale : 1)
-                        .animation(LaunchConstants.Animation.fade, value: state.currentPage)
-                        .onTapGesture {
-                            withAnimation(LaunchConstants.Animation.spring) {
-                                state.goToPage(page)
-                            }
+        HStack(spacing: LaunchConstants.Launcher.pageDotSpacing) {
+            ForEach(0..<state.pageCount, id: \.self) { page in
+                Circle()
+                    .fill(page == state.currentPage ? .white : .white.opacity(LaunchConstants.Launcher.inactivePageOpacity))
+                    .frame(
+                        width: LaunchConstants.Launcher.pageDotSize,
+                        height: LaunchConstants.Launcher.pageDotSize
+                    )
+                    .scaleEffect(page == state.currentPage ? LaunchConstants.Launcher.pageIndicatorActiveScale : 1)
+                    .animation(LaunchConstants.Animation.fade, value: state.currentPage)
+                    .onTapGesture {
+                        withAnimation(LaunchConstants.Animation.spring) {
+                            state.goToPage(page)
                         }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-            .launcherPageDotsChrome()
-
-            pageNavButton(systemName: "chevron.right", enabled: state.currentPage < state.pageCount - 1) {
-                withAnimation(LaunchConstants.Animation.spring) {
-                    state.changePage(1)
-                }
+                    }
             }
         }
         .frame(maxWidth: .infinity)
-    }
-
-    @ViewBuilder
-    private func pageNavButton(systemName: String, enabled: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: systemName)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.white.opacity(enabled ? 0.9 : 0.35))
-                .frame(
-                    width: LaunchConstants.Launcher.pageNavButtonSize,
-                    height: LaunchConstants.Launcher.pageNavButtonSize
-                )
-                .launcherPageNavChrome()
-        }
-        .buttonStyle(.plain)
-        .disabled(!enabled)
-        .shadow(color: .black.opacity(enabled ? 0.3 : 0), radius: 8, y: 3)
     }
 }
 
