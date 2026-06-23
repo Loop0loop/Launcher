@@ -34,6 +34,14 @@ let reorderedFolderResult = FolderLayout.createFolder(
 )
 assert(reorderedFolderResult.order == ["folder-2", "b"])
 
+let cleanup = LayoutCleanup.cleanup(
+    folders: [LaunchFolder(id: "folder", name: "Folder", appIDs: ["a", "missing"])],
+    order: ["folder", "missing", "a"],
+    validAppIDs: ["a"]
+)
+assert(cleanup.folders == [LaunchFolder(id: "folder", name: "Folder", appIDs: ["a"])])
+assert(cleanup.order == ["folder", "a"])
+
 assert(TrackpadIntent.pinch(magnification: -0.1) == .open)
 assert(TrackpadIntent.pinch(magnification: 0.1) == .close)
 assert(TrackpadIntent.pinch(magnification: 0.01) == nil)

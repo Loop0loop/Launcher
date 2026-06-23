@@ -18,16 +18,15 @@ final class AppState: ObservableObject {
     @Published var trackpadGateState: TrackpadGateState = .unknown
     @Published private var order: [String] = []
 
+    private let layoutStore = LayoutStore()
     private let pageSize = 35
-    private let layoutKey = "layoutOrder"
-    private let foldersKey = "folders"
     var closeLauncher: (() -> Void)?
     var dismissLauncher: (() -> Void)?
     var launchApp: ((LaunchApp) -> Void)?
 
     init() {
-        loadFolders()
-        order = savedOrder()
+        folders = layoutStore.loadFolders()
+        order = layoutStore.loadOrder()
         refreshLoginItemStatus()
         refreshAccessibilityStatus()
         refreshApps()
@@ -65,7 +64,11 @@ final class AppState: ObservableObject {
     }
 
     func refreshApps() {
-        apps = AppCatalog.scan()
+        apps = CatalogStore.scanApps()
+        let cleanup = layoutStore.cleanup(folders: folders, order: order, validAppIDs: Set(apps.map(\.id)))
+        folders = cleanup.folders
+        order = cleanup.order
+        layoutStore.saveFolders(folders)
         saveOrder()
     }
 
@@ -91,7 +94,7 @@ final class AppState: ObservableObject {
             order: visibleItems.map(\.id)
         )
         folders = result.folders
-        saveFolders()
+        layoutStore.saveFolders(folders)
         saveOrder(result.order)
         openFolder = folders.last
     }
@@ -114,7 +117,7 @@ final class AppState: ObservableObject {
 
     func saveOrder(_ order: [String]? = nil) {
         self.order = order ?? visibleItems.map(\.id)
-        LayoutPersistenceAdapter.set(self.order, forKey: layoutKey)
+        layoutStore.saveOrder(self.order)
     }
 
     func refreshLoginItemStatus() {
@@ -161,18 +164,4 @@ final class AppState: ObservableObject {
         }
     }
 
-    private func loadFolders() {
-        guard let data = LayoutPersistenceAdapter.data(forKey: foldersKey),
-              let decoded = try? JSONDecoder().decode([LaunchFolder].self, from: data) else { return }
-        folders = decoded
-    }
-
-    private func saveFolders() {
-        guard let data = try? JSONEncoder().encode(folders) else { return }
-        LayoutPersistenceAdapter.set(data, forKey: foldersKey)
-    }
-
-    private func savedOrder() -> [String] {
-        LayoutPersistenceAdapter.stringArray(forKey: layoutKey)
-    }
 }
