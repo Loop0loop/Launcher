@@ -5,6 +5,7 @@ LaunchOS 느낌의 macOS Launchpad 대체 앱. Pro/결제/라이선스 없음.
 ## Phase 0 - Project
 
 - [x] SwiftPM macOS app scaffold
+- [x] Minimal `.app` bundle builder
 - [x] MVP phase tracker
 - [x] Minimal `LaunchCheck` runnable check
 
@@ -50,4 +51,4 @@ Note: exact 4-finger gating uses private MultitouchSupport contact counts, with 
 - [x] Login item
 - [x] Performance pass
 
-Note: login item uses `SMAppService.mainApp`; final validation needs a bundled app build, not only `swift run`.
+Run: `Scripts/build-app.sh`, then open `.build/Launch.app`.
