@@ -35,7 +35,10 @@ final class TrackpadGestureMonitor {
                 } else if event.type == .scrollWheel,
                           abs(event.scrollingDeltaX) > abs(event.scrollingDeltaY),
                           let intent = TrackpadIntent.horizontalScroll(deltaX: event.scrollingDeltaX),
-                          event.timestamp - self.lastScrollIntentTime > 0.25 {
+                          TrackpadIntent.shouldAcceptScrollIntent(
+                            eventTime: event.timestamp,
+                            lastIntentTime: self.lastScrollIntentTime
+                          ) {
                     self.lastScrollIntentTime = event.timestamp
                     onIntent(intent)
                 }
