@@ -14,6 +14,8 @@ final class AppState: ObservableObject {
     @Published var launchAtLogin = false
     @Published var loginItemError: String?
     @Published var accessibilityTrusted = false
+    @Published var accessibilityState: PermissionState = .unknown
+    @Published var trackpadGateState: TrackpadGateState = .unknown
     @Published private var order: [String] = []
 
     private let pageSize = 35
@@ -133,10 +135,16 @@ final class AppState: ObservableObject {
 
     func refreshAccessibilityStatus() {
         accessibilityTrusted = AccessibilityAdapter.isTrusted
+        accessibilityState = accessibilityTrusted ? .allowed : .required
     }
 
     func requestAccessibilityPermission() {
         accessibilityTrusted = AccessibilityAdapter.requestPermission()
+        accessibilityState = accessibilityTrusted ? .allowed : .needsApproval
+    }
+
+    func setTrackpadGateActive(_ isActive: Bool) {
+        trackpadGateState = isActive ? .exactFourFinger : .fallbackPinch
     }
 
     func changePage(_ delta: Int) {

@@ -8,8 +8,12 @@ final class TrackpadGestureMonitor {
     private let fourFingerMonitor = FourFingerContactMonitor()
     private var lastScrollIntentTime: TimeInterval = 0
 
-    func start(onIntent: @escaping @MainActor (TrackpadIntent) -> Void) {
+    func start(
+        onGateStatus: @escaping @MainActor (Bool) -> Void,
+        onIntent: @escaping @MainActor (TrackpadIntent) -> Void
+    ) {
         fourFingerMonitor.start()
+        onGateStatus(fourFingerMonitor.isReady)
 
         let mask: NSEvent.EventTypeMask = [.magnify, .swipe, .scrollWheel]
 
@@ -101,4 +105,3 @@ private let contactCallback: FourFingerContactMonitor.ContactCallback = { _, _, 
     }
     return 0
 }
-

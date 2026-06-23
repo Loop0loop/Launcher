@@ -17,8 +17,15 @@ struct SettingsView: View {
             HStack {
                 Text("Accessibility")
                 Spacer()
-                Text(state.accessibilityTrusted ? "Allowed" : "Required")
-                    .foregroundStyle(state.accessibilityTrusted ? .green : .orange)
+                Text(state.accessibilityState.label)
+                    .foregroundStyle(state.accessibilityState == .allowed ? .green : .orange)
+            }
+
+            HStack {
+                Text("Trackpad")
+                Spacer()
+                Text(state.trackpadGateState.label)
+                    .foregroundStyle(state.trackpadGateState == .exactFourFinger ? .green : .orange)
             }
 
             Button("Request Accessibility Permission") {
@@ -35,4 +42,3 @@ struct SettingsView: View {
         .frame(width: 360)
     }
 }
-

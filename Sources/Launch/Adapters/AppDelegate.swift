@@ -77,7 +77,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func startTrackpadMonitor() {
-        trackpadMonitor.start { [weak self] intent in
+        trackpadMonitor.start { [weak self] isActive in
+            self?.state.setTrackpadGateActive(isActive)
+        } onIntent: { [weak self] intent in
             guard let self else { return }
             switch intent {
             case .open:
