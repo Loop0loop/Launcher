@@ -1,16 +1,18 @@
 import Foundation
 import LaunchCore
-import SwiftUI
 
 @MainActor
 final class AppState: ObservableObject {
     @Published var apps: [LaunchApp] = []
     @Published var folders: [LaunchFolder] = []
     @Published var query = "" {
-        didSet { currentPage = 0 }
+        didSet {
+            handleQueryChange(oldValue: oldValue)
+        }
     }
     @Published var currentPage = 0
-    @Published private(set) var pageDirection = 0
+    @Published var selectedItemID: String?
+    @Published private(set) var keyboardSelectionActive = false
     @Published var draggedAppID: String?
     @Published var openFolder: LaunchFolder?
     @Published var launchAtLogin = false
@@ -19,10 +21,18 @@ final class AppState: ObservableObject {
     @Published var accessibilityState: PermissionState = .unknown
     @Published var trackpadGateState: TrackpadGateState = .unknown
     @Published var launcherVisible = false
+    @Published var appearance = AppearanceStore.load() {
+        didSet {
+            guard oldValue != appearance else { return }
+            AppearanceStore.save(appearance)
+        }
+    }
     @Published private var order: [String] = []
 
     private let layoutStore = LayoutStore()
     private let pageSize = LaunchConstants.Launcher.pageSize
+    private var pageBeforeSearch = 0
+    private var selectionBeforeSearch: String?
     var closeLauncher: (() -> Void)?
     var dismissLauncher: (() -> Void)?
     var launchApp: ((LaunchApp) -> Void)?
@@ -37,7 +47,7 @@ final class AppState: ObservableObject {
 
     var visibleApps: [LaunchApp] {
         guard !query.isEmpty else { return apps }
-        return apps.filter { $0.name.localizedCaseInsensitiveContains(query) }
+        return AppSearch.rankedApps(apps, matching: query)
     }
 
     var visibleItems: [LauncherItem] {
@@ -63,7 +73,11 @@ final class AppState: ObservableObject {
     }
 
     var pageItems: [LauncherItem] {
-        Array(visibleItems.dropFirst(currentPage * pageSize).prefix(pageSize))
+        items(forPage: currentPage)
+    }
+
+    func items(forPage page: Int) -> [LauncherItem] {
+        Array(visibleItems.dropFirst(page * pageSize).prefix(pageSize))
     }
 
     func refreshApps() {
@@ -73,13 +87,81 @@ final class AppState: ObservableObject {
         order = cleanup.order
         layoutStore.saveFolders(folders)
         saveOrder()
+        ensureSelection()
     }
 
     func launch(_ app: LaunchApp) {
         launchApp?(app)
     }
 
+    func launchSelected() {
+        guard let item = selectedItem() ?? visibleItems.first else { return }
+
+        switch item {
+        case .app(let app):
+            launch(app)
+        case .folder(let folder, _):
+            openFolder = folder
+        }
+    }
+
+    func appendSearchText(_ text: String) {
+        guard !text.isEmpty else { return }
+        closeFolder()
+        query += text
+    }
+
+    func deleteSearchBackward() {
+        guard !query.isEmpty else { return }
+        query.removeLast()
+    }
+
+    func handleEscape() {
+        if openFolder != nil {
+            closeFolder()
+        } else if !query.isEmpty {
+            clearSearch()
+        } else {
+            closeLauncher?()
+        }
+    }
+
+    func moveSelection(by delta: Int) {
+        keyboardSelectionActive = true
+        let items = visibleItems
+        guard !items.isEmpty else {
+            selectedItemID = nil
+            return
+        }
+
+        let currentIndex = selectedItemID.flatMap { id in items.firstIndex { $0.id == id } } ?? currentPage * pageSize
+        let nextIndex = min(max(currentIndex + delta, 0), items.count - 1)
+        let nextPage = nextIndex / pageSize
+        if nextPage != currentPage {
+            currentPage = nextPage
+        }
+        selectedItemID = items[nextIndex].id
+    }
+
+    func ensureSelection() {
+        let ids = Set(visibleItems.map(\.id))
+        if keyboardSelectionActive, let selectedItemID, ids.contains(selectedItemID) { return }
+        if keyboardSelectionActive {
+            selectedItemID = visibleItems.first?.id
+        }
+    }
+
+    func clearSelection() {
+        keyboardSelectionActive = false
+        selectedItemID = nil
+    }
+
+    func showsKeyboardSelection(for id: String) -> Bool {
+        keyboardSelectionActive && selectedItemID == id
+    }
+
     func move(_ id: String, before targetID: String) {
+        guard query.isEmpty else { return }
         let nextOrder = LayoutOrder.move(id, before: targetID, in: visibleItems.map(\.id))
         saveOrder(nextOrder)
     }
@@ -107,9 +189,7 @@ final class AppState: ObservableObject {
     }
 
     func closeFolder() {
-        withAnimation(LaunchConstants.Animation.folderSpring) {
-            openFolder = nil
-        }
+        openFolder = nil
     }
 
     func apps(in folder: LaunchFolder) -> [LaunchApp] {
@@ -123,6 +203,14 @@ final class AppState: ObservableObject {
     func saveOrder(_ order: [String]? = nil) {
         self.order = order ?? visibleItems.map(\.id)
         layoutStore.saveOrder(self.order)
+    }
+
+    func applyNameSort() {
+        guard query.isEmpty else { return }
+        let sortedRootIDs = visibleItems.map(\.id).sorted { lhs, rhs in
+            itemName(lhs).localizedStandardCompare(itemName(rhs)) == .orderedAscending
+        }
+        saveOrder(sortedRootIDs)
     }
 
     func refreshLoginItemStatus() {
@@ -155,15 +243,33 @@ final class AppState: ObservableObject {
         trackpadGateState = isActive ? .exactPinch : .fallbackPinch
     }
 
+    private var pageChangeLockedUntil = Date.distantPast
+
+    func goToPage(_ page: Int) {
+        guard Date() >= pageChangeLockedUntil else { return }
+        let nextPage = min(max(page, 0), pageCount - 1)
+        guard nextPage != currentPage else { return }
+        currentPage = nextPage
+        if keyboardSelectionActive {
+            selectedItemID = items(forPage: nextPage).first?.id
+        }
+        pageChangeLockedUntil = Date().addingTimeInterval(LaunchConstants.Launcher.pageChangeCooldown)
+    }
+
     func changePage(_ delta: Int) {
         guard delta != 0 else { return }
+        guard Date() >= pageChangeLockedUntil else { return }
         let nextPage = min(max(currentPage + delta, 0), pageCount - 1)
         guard nextPage != currentPage else { return }
-        pageDirection = delta
         currentPage = nextPage
+        if keyboardSelectionActive {
+            selectedItemID = items(forPage: nextPage).first?.id
+        }
+        pageChangeLockedUntil = Date().addingTimeInterval(LaunchConstants.Launcher.pageChangeCooldown)
     }
 
     func dropApp(_ draggedID: String, on targetID: String) {
+        guard query.isEmpty else { return }
         if draggedID == targetID { return }
 
         if appByID(targetID) != nil, appByID(draggedID) != nil {
@@ -173,4 +279,32 @@ final class AppState: ObservableObject {
         }
     }
 
+}
+
+private extension AppState {
+    func selectedItem() -> LauncherItem? {
+        guard let selectedItemID else { return nil }
+        return visibleItems.first { $0.id == selectedItemID }
+    }
+
+    func handleQueryChange(oldValue: String) {
+        if oldValue.isEmpty, !query.isEmpty {
+            pageBeforeSearch = currentPage
+            selectionBeforeSearch = selectedItemID
+            currentPage = 0
+            keyboardSelectionActive = true
+            selectedItemID = visibleItems.first?.id
+        } else if !oldValue.isEmpty, query.isEmpty {
+            currentPage = min(pageBeforeSearch, pageCount - 1)
+            selectedItemID = selectionBeforeSearch
+            ensureSelection()
+        } else if !query.isEmpty {
+            currentPage = 0
+            selectedItemID = visibleItems.first?.id
+        }
+    }
+
+    func clearSearch() {
+        query = ""
+    }
 }

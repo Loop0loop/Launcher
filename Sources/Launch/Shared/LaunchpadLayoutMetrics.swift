@@ -11,12 +11,23 @@ struct LaunchpadLayoutMetrics {
         max(LaunchConstants.Launcher.minHorizontalPadding, size.width * LaunchConstants.Launcher.horizontalPaddingRatio)
     }
 
-    var topInset: CGFloat {
+    /// Space above the search field (menu bar region).
+    var safeTopInset: CGFloat {
         max(LaunchConstants.Launcher.minTopInset, size.height * LaunchConstants.Launcher.topInsetRatio)
+            + LaunchConstants.Launcher.menuBarReserve
     }
 
-    var bottomInset: CGFloat {
-        LaunchConstants.Launcher.dockReserve
+    /// Space below page control (dock region).
+    var safeBottomInset: CGFloat {
+        max(LaunchConstants.Launcher.minBottomInset, size.height * LaunchConstants.Launcher.bottomInsetRatio)
+    }
+
+    var searchBarHeight: CGFloat {
+        LaunchConstants.Launcher.searchHeight
+    }
+
+    var pageControlHeight: CGFloat {
+        LaunchConstants.Launcher.pageControlHeight
     }
 
     var searchToGridGap: CGFloat {
@@ -27,6 +38,23 @@ struct LaunchpadLayoutMetrics {
         LaunchConstants.Launcher.gridToPagerGap
     }
 
+    /// Total height reserved at top for search chrome + gap before grid.
+    var topChromeHeight: CGFloat {
+        safeTopInset + searchBarHeight + searchToGridGap
+    }
+
+    /// Total height reserved at bottom for page control + gap + dock.
+    func bottomChromeHeight(showsPageControl: Bool) -> CGFloat {
+        guard showsPageControl else { return safeBottomInset }
+        return pageControlHeight + gridToPagerGap + safeBottomInset
+    }
+
+    /// Grid area between top and bottom chrome.
+    func gridHeight(showsPageControl: Bool) -> CGFloat {
+        let available = size.height - topChromeHeight - bottomChromeHeight(showsPageControl: showsPageControl)
+        return max(available, 120)
+    }
+
     var gridWidth: CGFloat {
         size.width - horizontalPadding * 2
     }
@@ -35,14 +63,8 @@ struct LaunchpadLayoutMetrics {
         gridWidth / CGFloat(columns)
     }
 
-    var gridHeight: CGFloat {
-        let reserved = topInset + searchToGridGap + LaunchConstants.Launcher.searchHeight
-            + gridToPagerGap + LaunchConstants.Launcher.pageDotHeight + bottomInset
-        return max(size.height - reserved, LaunchConstants.Launcher.minGridHeight)
-    }
-
     var rowHeight: CGFloat {
-        gridHeight / CGFloat(rows)
+        gridHeight(showsPageControl: true) / CGFloat(rows)
     }
 
     var iconSize: CGFloat {

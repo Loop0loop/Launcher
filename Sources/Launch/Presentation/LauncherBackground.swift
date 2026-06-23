@@ -1,6 +1,8 @@
 import SwiftUI
 
 struct LauncherBackgroundView: View {
+    let dimOpacity: Double
+
     var body: some View {
         ZStack {
             VisualEffectView(
@@ -9,7 +11,7 @@ struct LauncherBackgroundView: View {
             )
             .ignoresSafeArea()
 
-            Color.black.opacity(LaunchConstants.Launcher.backgroundOpacity)
+            Color.black.opacity(dimOpacity)
                 .ignoresSafeArea()
         }
     }

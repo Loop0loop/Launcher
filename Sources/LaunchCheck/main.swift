@@ -12,8 +12,16 @@ let apps = [
     LaunchApp(id: "b", name: "B", path: "/B.app"),
     LaunchApp(id: "c", name: "C", path: "/C.app")
 ]
+let searchApps = [
+    LaunchApp(id: "com.example.notes", name: "Notes", path: "/Applications/Notes.app"),
+    LaunchApp(id: "com.example.cafe", name: "Café", path: "/Applications/Cafe.app"),
+    LaunchApp(id: "com.example.camera", name: "Camera", path: "/Applications/Camera.app")
+]
 assert(LayoutOrder.apply(["c", "a"], to: apps).map(\.id) == ["c", "a", "b"])
 assert(LayoutOrder.move("c", before: "b", in: ["a", "b", "c"]) == ["a", "c", "b"])
+assert(AppSearch.rankedApps(searchApps, matching: "ca").map(\.name) == ["Café", "Camera"])
+assert(AppSearch.rankedApps(searchApps, matching: "notes").map(\.name) == ["Notes"])
+assert(AppSearch.rankedApps(searchApps, matching: "example.camera").map(\.name) == ["Camera"])
 
 let folderResult = FolderLayout.createFolder(
     id: "folder-1",

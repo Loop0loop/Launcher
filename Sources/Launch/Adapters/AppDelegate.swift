@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     var launcherLifecycle: LauncherLifecycle?
     var settingsWindow: NSWindow?
     var statusItem: NSStatusItem?
+    var keyMonitor: Any?
     private lazy var statusMenu: NSMenu = makeStatusMenu()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -18,6 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         makeStatusItem()
         state.requestAccessibilityPermission()
         startTrackpadMonitor()
+        startKeyMonitor()
     }
 
     func makeWindow() {
@@ -31,6 +33,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let rootView = LauncherView(state: state).environment(\.iconCache, iconCache)
         let hosting = NSHostingView(rootView: rootView)
         hosting.safeAreaRegions = []
+        hosting.autoresizingMask = [.width, .height]
         window.contentView = hosting
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.isOpaque = false
@@ -57,6 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         menu.addItem(withTitle: LaunchConstants.Menu.toggle, action: #selector(toggleLauncher), keyEquivalent: LaunchConstants.Menu.toggleKey)
         menu.addItem(withTitle: LaunchConstants.Menu.settings, action: #selector(showSettings), keyEquivalent: LaunchConstants.Menu.settingsKey)
         menu.addItem(withTitle: LaunchConstants.Menu.refreshApps, action: #selector(refreshApps), keyEquivalent: LaunchConstants.Menu.refreshKey)
+        menu.addItem(withTitle: LaunchConstants.Menu.sortByName, action: #selector(sortAppsByName), keyEquivalent: LaunchConstants.Menu.sortByNameKey)
         menu.addItem(.separator())
         menu.addItem(withTitle: LaunchConstants.Menu.quit, action: #selector(NSApp.terminate), keyEquivalent: LaunchConstants.Menu.quitKey)
         return menu
@@ -89,16 +93,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         iconCache.clear()
     }
 
+    @objc func sortAppsByName() {
+        state.applyNameSort()
+    }
+
     @objc func showSettings() {
         if settingsWindow == nil {
             let window = NSWindow(
-                contentRect: .init(x: 0, y: 0, width: LaunchConstants.Settings.width, height: LaunchConstants.Settings.height),
-                styleMask: [.titled, .closable],
+                contentRect: .init(
+                    x: 0,
+                    y: 0,
+                    width: LaunchConstants.Settings.width,
+                    height: LaunchConstants.Settings.height
+                ),
+                styleMask: [.titled, .closable, .fullSizeContentView],
                 backing: .buffered,
                 defer: false
             )
             window.title = LaunchConstants.App.settingsTitle
-            window.contentView = NSHostingView(rootView: SettingsView(state: state))
+            window.titlebarAppearsTransparent = true
+            window.titleVisibility = .hidden
+            window.isOpaque = false
+            window.backgroundColor = .clear
+            window.isMovableByWindowBackground = true
+            window.hasShadow = true
+            let hosting = NSHostingView(rootView: SettingsView(state: state))
+            hosting.safeAreaRegions = []
+            window.contentView = hosting
             settingsWindow = window
         }
 
@@ -128,6 +149,45 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                     self.state.changePage(1)
                 }
             }
+        }
+    }
+
+    func startKeyMonitor() {
+        keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            guard let self, self.launcherLifecycle?.isVisible == true else { return event }
+            return self.handleLauncherKey(event)
+        }
+    }
+
+    func handleLauncherKey(_ event: NSEvent) -> NSEvent? {
+        switch event.keyCode {
+        case 36, 76:
+            state.launchSelected()
+            return nil
+        case 53:
+            state.handleEscape()
+            return nil
+        case 51:
+            state.deleteSearchBackward()
+            return nil
+        case 123:
+            state.moveSelection(by: -1)
+            return nil
+        case 124:
+            state.moveSelection(by: 1)
+            return nil
+        case 125:
+            state.moveSelection(by: LaunchConstants.Launcher.columns)
+            return nil
+        case 126:
+            state.moveSelection(by: -LaunchConstants.Launcher.columns)
+            return nil
+        default:
+            guard event.modifierFlags.intersection([.command, .control, .option]).isEmpty,
+                  let text = event.characters,
+                  text.rangeOfCharacter(from: .controlCharacters) == nil else { return event }
+            state.appendSearchText(text)
+            return nil
         }
     }
 }

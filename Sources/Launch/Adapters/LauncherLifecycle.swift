@@ -1,13 +1,12 @@
 import AppKit
 import LaunchCore
-import SwiftUI
 
 @MainActor
 final class LauncherLifecycle {
     private let state: AppState
     private let window: NSWindow
     private var previousApp: NSRunningApplication?
-    private var dismissToken = 0
+    private var isAnimating = false
 
     init(state: AppState, window: NSWindow) {
         self.state = state
@@ -15,11 +14,12 @@ final class LauncherLifecycle {
     }
 
     var isVisible: Bool {
-        window.isVisible
+        window.isVisible && window.alphaValue > 0.01
     }
 
     func toggle() {
-        if isVisible, state.launcherVisible {
+        guard !isAnimating else { return }
+        if isVisible {
             hide()
         } else {
             show()
@@ -27,55 +27,75 @@ final class LauncherLifecycle {
     }
 
     func show() {
-        if isVisible, state.launcherVisible { return }
+        guard !isAnimating else { return }
+        if isVisible { return }
 
-        dismissToken += 1
         rememberPreviousApp()
-
         state.query = ""
-        state.closeFolder()
+        state.openFolder = nil
+        state.clearSelection()
+
         window.setFrame(NSScreen.main?.frame ?? window.frame, display: true)
-        window.alphaValue = 1
-        state.launcherVisible = false
+        window.alphaValue = 0
+        window.contentView?.alphaValue = 0
+        state.launcherVisible = true
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
-        withAnimation(LaunchConstants.Animation.showSpring) {
-            state.launcherVisible = true
-        }
+        animateWindow(to: 1)
     }
 
     func hide() {
-        guard isVisible else { return }
-        animatedDismiss(restorePreviousApp: true)
-    }
-
-    func animatedDismiss(restorePreviousApp: Bool = false) {
-        dismissToken += 1
-        let token = dismissToken
-
-        withAnimation(LaunchConstants.Animation.hideSpring) {
-            state.launcherVisible = false
-        }
-
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: UInt64(LaunchConstants.Lifecycle.hideDuration * 1_000_000_000))
-            guard token == self.dismissToken else { return }
-            self.dismiss()
-            if restorePreviousApp {
-                self.activatePreviousApp()
-            }
-        }
+        guard !isAnimating, window.isVisible else { return }
+        animateWindow(to: 0, restorePreviousApp: true)
     }
 
     func dismiss() {
         state.launcherVisible = false
         window.orderOut(nil)
+        resetWindowAlpha()
     }
 
     func launch(_ app: LaunchApp) {
+        guard !isAnimating else {
+            AppSystemAdapter.launch(app)
+            dismiss()
+            return
+        }
         AppSystemAdapter.launch(app)
-        animatedDismiss(restorePreviousApp: false)
+        animateWindow(to: 0, restorePreviousApp: false)
+    }
+
+    private func animateWindow(to targetAlpha: CGFloat, restorePreviousApp: Bool = false) {
+        isAnimating = true
+
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = LaunchConstants.Lifecycle.windowDuration
+            context.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            window.animator().alphaValue = targetAlpha
+            window.contentView?.animator().alphaValue = targetAlpha
+        } completionHandler: { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                self.window.alphaValue = targetAlpha
+                self.window.contentView?.alphaValue = targetAlpha
+                self.isAnimating = false
+
+                if targetAlpha <= 0.01 {
+                    self.state.launcherVisible = false
+                    self.window.orderOut(nil)
+                    self.resetWindowAlpha()
+                    if restorePreviousApp {
+                        self.activatePreviousApp()
+                    }
+                }
+            }
+        }
+    }
+
+    private func resetWindowAlpha() {
+        window.alphaValue = 1
+        window.contentView?.alphaValue = 1
     }
 
     private func rememberPreviousApp() {

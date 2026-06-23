@@ -12,11 +12,13 @@ enum LaunchConstants {
         static let toggle = "Toggle Launch"
         static let settings = "Settings"
         static let refreshApps = "Refresh Apps"
+        static let sortByName = "Sort by Name"
         static let quit = "Quit"
 
         static let toggleKey = "l"
         static let settingsKey = ","
         static let refreshKey = "r"
+        static let sortByNameKey = "s"
         static let quitKey = "q"
     }
 
@@ -25,10 +27,29 @@ enum LaunchConstants {
         static let accessibility = "Accessibility"
         static let trackpad = "Trackpad"
         static let requestAccessibility = "Request Accessibility Permission"
+        static let appearanceSection = "Appearance"
+        static let generalSection = "General"
+        static let permissionsSection = "Permissions"
+        static let backgroundTransparency = "Background Transparency"
+        static let folderDim = "Folder Dim"
+        static let backgroundTransparencyHelp = "How much of the wallpaper shows through the launcher."
+        static let folderDimHelp = "Darkening behind an open folder."
 
-        static let width: CGFloat = 360
-        static let height: CGFloat = 180
+        static let width: CGFloat = 420
+        static let height: CGFloat = 560
         static let padding: CGFloat = 24
+        static let sectionSpacing: CGFloat = 18
+        static let cardCornerRadius: CGFloat = 16
+        static let titleBarInset: CGFloat = 36
+    }
+
+    enum Appearance {
+        static let maxBackgroundDim = 0.45
+        static let minFolderDim = 0.08
+        static let maxFolderDim = 0.55
+        static let defaultBackgroundTransparency = 0.85
+        static let defaultFolderDimOpacity = 0.28
+        static let settingsBackdropOpacity = 0.18
     }
 
     enum Storage {
@@ -44,12 +65,14 @@ enum LaunchConstants {
 
         static let minHorizontalPadding: CGFloat = 60
         static let horizontalPaddingRatio: CGFloat = 0.08
-        static let minTopInset: CGFloat = 48
-        static let topInsetRatio: CGFloat = 1.0 / 12.0
-        static let dockReserve: CGFloat = 120
-        static let searchToGridGap: CGFloat = 44
+        static let minTopInset: CGFloat = 52
+        static let topInsetRatio: CGFloat = 1.0 / 14.0
+        static let minBottomInset: CGFloat = 72
+        static let bottomInsetRatio: CGFloat = 0.1
+        static let menuBarReserve: CGFloat = 24
+        static let searchToGridGap: CGFloat = 20
         static let gridToPagerGap: CGFloat = 16
-        static let minGridHeight: CGFloat = 520
+        static let minGridHeight: CGFloat = 240
 
         static let gridSpacing: CGFloat = 24
         static let minGridRowSpacing: CGFloat = 16
@@ -58,32 +81,39 @@ enum LaunchConstants {
         static let minIconSize: CGFloat = 80
         static let maxIconSize: CGFloat = 112
 
-        static let searchWidth: CGFloat = 300
-        static let searchHeight: CGFloat = 36
-        static let searchHorizontalPadding: CGFloat = 12
-        static let searchFontSize: CGFloat = 16
-        static let searchFillOpacity = 0.22
+        static let searchWidth: CGFloat = 360
+        static let searchHeight: CGFloat = 40
+        static let searchHorizontalPadding: CGFloat = 14
+        static let searchFontSize: CGFloat = 15
+        static let searchFillOpacity = 0.42
+        static let searchBorderOpacity = 0.32
+        static let chromeMaterial: NSVisualEffectView.Material = .hudWindow
 
         static let backgroundMaterial: NSVisualEffectView.Material = .fullScreenUI
         static let backgroundOpacity = 0.06
         static let overlayOpacity = 0.28
 
-        static let pageDotSize: CGFloat = 8
-        static let pageDotSpacing: CGFloat = 8
-        static let pageDotHeight: CGFloat = 8
-        static let inactivePageOpacity = 0.3
+        static let pageDotSize: CGFloat = 7
+        static let pageDotSpacing: CGFloat = 10
+        static let pageControlHeight: CGFloat = 36
+        static let pageNavButtonSize: CGFloat = 32
+        static let pageControlSpacing: CGFloat = 20
+        static let inactivePageOpacity = 0.4
+        static let pageIndicatorActiveScale: CGFloat = 1.2
 
-        static let contentHiddenScale = 0.9
-        static let contentShowOvershootScale = 1.06
-        static let dragMinimumDistance: CGFloat = 40
+        static let dragMinimumDistance: CGFloat = 12
         static let pageDragThreshold: CGFloat = 60
+        static let pageSwipeThresholdRatio: CGFloat = 0.15
+        static let pageRubberBandRatio: CGFloat = 0.25
+        static let pageChangeCooldown: TimeInterval = 0.35
+        static let folderEntranceScale: CGFloat = 0.85
     }
 
     enum Animation {
-        static let showSpring = SwiftUI.Animation.spring(response: 0.34, dampingFraction: 0.82)
-        static let hideSpring = SwiftUI.Animation.spring(response: 0.26, dampingFraction: 0.92)
-        static let pageSpring = SwiftUI.Animation.spring(response: 0.36, dampingFraction: 0.86)
-        static let folderSpring = SwiftUI.Animation.spring(response: 0.32, dampingFraction: 0.84)
+        /// Primary spring used by kristof12345/Launchpad and similar clones.
+        static let spring = SwiftUI.Animation.interpolatingSpring(stiffness: 400, damping: 35)
+        static let fade = SwiftUI.Animation.easeInOut(duration: 0.25)
+        static let quick = SwiftUI.Animation.easeOut(duration: 0.2)
     }
 
     enum Icon {
@@ -114,8 +144,7 @@ enum LaunchConstants {
     }
 
     enum Lifecycle {
-        static let showDuration = 0.34
-        static let hideDuration = 0.26
+        static let windowDuration: TimeInterval = 0.25
     }
 
     enum Multitouch {
@@ -123,7 +152,7 @@ enum LaunchConstants {
         static let createListSymbol = "MTDeviceCreateList"
         static let registerContactFrameCallbackSymbol = "MTRegisterContactFrameCallback"
         static let deviceStartSymbol = "MTDeviceStart"
-        static let gestureFingerCount = 5
+        static let gestureFingerCount = 4
         static let pinchInRatio = 0.9
         static let pinchOutRatio = 1.1
         static let triggerCooldown: Double = 0.25
