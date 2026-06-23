@@ -1,5 +1,6 @@
 import AppKit
 import LaunchCore
+import SwiftUI
 
 @MainActor
 final class LauncherLifecycle {
@@ -18,7 +19,7 @@ final class LauncherLifecycle {
     }
 
     func toggle() {
-        if isVisible {
+        if isVisible, state.launcherVisible {
             hide()
         } else {
             show()
@@ -26,52 +27,43 @@ final class LauncherLifecycle {
     }
 
     func show() {
-        guard !state.launcherVisible else { return }
+        if isVisible, state.launcherVisible { return }
 
         dismissToken += 1
-        let frontmost = NSWorkspace.shared.frontmostApplication
-        if frontmost?.processIdentifier != NSRunningApplication.current.processIdentifier {
-            previousApp = frontmost
-        }
+        rememberPreviousApp()
 
         state.query = ""
+        state.closeFolder()
         window.setFrame(NSScreen.main?.frame ?? window.frame, display: true)
-        window.alphaValue = 0
+        window.alphaValue = 1
         state.launcherVisible = false
         window.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
-        state.launcherVisible = true
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = LaunchConstants.Lifecycle.showDuration
-            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            window.animator().alphaValue = 1
+
+        withAnimation(LaunchConstants.Animation.showSpring) {
+            state.launcherVisible = true
         }
     }
 
     func hide() {
-        animatedDismiss {
-            if #available(macOS 14.0, *) {
-                self.previousApp?.activate()
-            } else {
-                self.previousApp?.activate(options: [.activateIgnoringOtherApps])
-            }
-        }
+        guard isVisible else { return }
+        animatedDismiss(restorePreviousApp: true)
     }
 
-    func animatedDismiss(completion: (@MainActor @Sendable () -> Void)? = nil) {
+    func animatedDismiss(restorePreviousApp: Bool = false) {
         dismissToken += 1
         let token = dismissToken
-        state.launcherVisible = false
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = LaunchConstants.Lifecycle.hideDuration
-            context.timingFunction = CAMediaTimingFunction(name: .easeIn)
-            window.animator().alphaValue = 0
-        } completionHandler: {
-            Task { @MainActor in
-                guard token == self.dismissToken else { return }
-                self.dismiss()
-                self.window.alphaValue = 1
-                completion?()
+
+        withAnimation(LaunchConstants.Animation.hideSpring) {
+            state.launcherVisible = false
+        }
+
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: UInt64(LaunchConstants.Lifecycle.hideDuration * 1_000_000_000))
+            guard token == self.dismissToken else { return }
+            self.dismiss()
+            if restorePreviousApp {
+                self.activatePreviousApp()
             }
         }
     }
@@ -83,6 +75,21 @@ final class LauncherLifecycle {
 
     func launch(_ app: LaunchApp) {
         AppSystemAdapter.launch(app)
-        animatedDismiss()
+        animatedDismiss(restorePreviousApp: false)
+    }
+
+    private func rememberPreviousApp() {
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        if frontmost?.processIdentifier != NSRunningApplication.current.processIdentifier {
+            previousApp = frontmost
+        }
+    }
+
+    private func activatePreviousApp() {
+        if #available(macOS 14.0, *) {
+            previousApp?.activate()
+        } else {
+            previousApp?.activate(options: [.activateIgnoringOtherApps])
+        }
     }
 }

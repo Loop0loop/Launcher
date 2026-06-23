@@ -4,73 +4,98 @@ import UniformTypeIdentifiers
 
 struct LauncherView: View {
     @ObservedObject var state: AppState
-    @StateObject private var iconCache = IconCache()
+    @Environment(\.iconCache) private var iconCache
     @Namespace private var folderAnimation
 
-    private let columns = Array(
-        repeating: GridItem(.fixed(LaunchConstants.Launcher.gridItemWidth), spacing: LaunchConstants.Launcher.gridSpacing),
-        count: LaunchConstants.Launcher.columns
-    )
-
     var body: some View {
-        ZStack {
-            LauncherBackgroundView()
+        GeometryReader { geometry in
+            let layout = LaunchpadLayoutMetrics(size: geometry.size)
+            let columns = Array(
+                repeating: GridItem(.fixed(layout.columnWidth), spacing: layout.gridColumnSpacing),
+                count: layout.columns
+            )
 
-            VStack(spacing: LaunchConstants.Launcher.verticalSpacing) {
-                LauncherSearchField(query: $state.query)
+            ZStack {
+                LauncherBackgroundView()
+                    .contentShape(Rectangle())
+                    .onTapGesture(perform: handleBackgroundTap)
 
-                ZStack {
-                    LazyVGrid(columns: columns, spacing: LaunchConstants.Launcher.gridRowSpacing) {
-                        ForEach(state.pageItems) { item in
-                            LauncherItemView(
-                                item: item,
-                                state: state,
-                                iconCache: iconCache,
-                                folderNamespace: folderAnimation
-                            )
+                launcherContent(layout: layout, columns: columns)
+                    .opacity(state.launcherVisible ? 1 : 0)
+                    .scaleEffect(state.launcherVisible ? 1 : LaunchConstants.Launcher.contentHiddenScale)
+                    .animation(LaunchConstants.Animation.showSpring, value: state.launcherVisible)
+
+                if let folder = state.openFolder {
+                    Color.black.opacity(LaunchConstants.Launcher.overlayOpacity)
+                        .ignoresSafeArea()
+                        .transition(.opacity)
+                        .onTapGesture { state.closeFolder() }
+
+                    FolderOverlay(folder: folder, state: state, namespace: folderAnimation)
+                        .transition(.scale(scale: 0.88).combined(with: .opacity))
+                }
+            }
+            .gesture(
+                DragGesture(minimumDistance: LaunchConstants.Launcher.dragMinimumDistance)
+                    .onEnded { value in
+                        if value.translation.width < -LaunchConstants.Launcher.pageDragThreshold {
+                            state.changePage(1)
+                        } else if value.translation.width > LaunchConstants.Launcher.pageDragThreshold {
+                            state.changePage(-1)
                         }
                     }
-                    .frame(height: LaunchConstants.Launcher.gridHeight, alignment: .top)
-                    .id(state.currentPage)
-                    .transition(pageTransition(for: state.pageDirection))
-                }
-                .animation(.spring(response: 0.34, dampingFraction: 0.86), value: state.currentPage)
-
-                LauncherPageIndicator(pageCount: state.pageCount, currentPage: state.currentPage)
-            }
-            .padding(.top, LaunchConstants.Launcher.topPadding)
-            .opacity(state.launcherVisible ? 1 : 0)
-            .scaleEffect(state.launcherVisible ? 1 : LaunchConstants.Launcher.contentHiddenScale)
-            .animation(.spring(response: 0.28, dampingFraction: 0.88), value: state.launcherVisible)
-
-            if let folder = state.openFolder {
-                Color.black.opacity(LaunchConstants.Launcher.overlayOpacity)
-                    .ignoresSafeArea()
-                    .transition(.opacity)
-                    .onTapGesture { state.closeFolder() }
-
-                FolderOverlay(folder: folder, state: state, namespace: folderAnimation)
-                    .transition(.scale(scale: 0.88).combined(with: .opacity))
-            }
+            )
         }
-        .gesture(
-            DragGesture(minimumDistance: LaunchConstants.Launcher.dragMinimumDistance)
-                .onEnded { value in
-                    if value.translation.width < -LaunchConstants.Launcher.pageDragThreshold {
-                        state.changePage(1)
-                    } else if value.translation.width > LaunchConstants.Launcher.pageDragThreshold {
-                        state.changePage(-1)
+        .onExitCommand(perform: handleBackgroundTap)
+        .animation(LaunchConstants.Animation.folderSpring, value: state.openFolder?.id)
+    }
+
+    @ViewBuilder
+    private func launcherContent(layout: LaunchpadLayoutMetrics, columns: [GridItem]) -> some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: layout.topInset)
+
+            LauncherSearchField(query: $state.query)
+                .padding(.bottom, layout.searchToGridGap)
+
+            ZStack {
+                LazyVGrid(columns: columns, spacing: layout.gridRowSpacing) {
+                    ForEach(state.pageItems) { item in
+                        LauncherItemView(
+                            item: item,
+                            state: state,
+                            layout: layout,
+                            folderNamespace: folderAnimation
+                        )
                     }
                 }
-        )
-        .onExitCommand {
-            if state.query.isEmpty {
-                state.closeLauncher?()
-            } else {
-                state.query = ""
+                .frame(height: layout.gridHeight, alignment: .top)
+                .id(state.currentPage)
+                .transition(pageTransition(for: state.pageDirection))
             }
+            .animation(LaunchConstants.Animation.pageSpring, value: state.currentPage)
+
+            Spacer(minLength: layout.gridToPagerGap)
+
+            LauncherPageIndicator(pageCount: state.pageCount, currentPage: state.currentPage)
+
+            Spacer(minLength: layout.bottomInset)
         }
-        .animation(.spring(response: 0.32, dampingFraction: 0.86), value: state.openFolder?.id)
+        .background {
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture(perform: handleBackgroundTap)
+        }
+    }
+
+    private func handleBackgroundTap() {
+        if state.openFolder != nil {
+            state.closeFolder()
+        } else if state.query.isEmpty {
+            state.closeLauncher?()
+        } else {
+            state.query = ""
+        }
     }
 
     private func pageTransition(for direction: Int) -> AnyTransition {
@@ -86,19 +111,19 @@ struct LauncherSearchField: View {
     @Binding var query: String
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Image(systemName: "magnifyingglass")
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(.white.opacity(0.72))
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(.white.opacity(0.65))
 
             TextField(LaunchConstants.Launcher.searchPlaceholder, text: $query)
                 .textFieldStyle(.plain)
                 .font(.system(size: LaunchConstants.Launcher.searchFontSize, weight: .regular))
-                .foregroundStyle(.white)
+                .foregroundStyle(.white.opacity(0.92))
         }
         .padding(.horizontal, LaunchConstants.Launcher.searchHorizontalPadding)
         .frame(width: LaunchConstants.Launcher.searchWidth, height: LaunchConstants.Launcher.searchHeight)
-        .launchGlassCapsule()
+        .launchpadSearchChrome()
     }
 }
 
@@ -113,11 +138,9 @@ struct LauncherPageIndicator: View {
                     Circle()
                         .fill(page == currentPage ? .white : .white.opacity(LaunchConstants.Launcher.inactivePageOpacity))
                         .frame(width: LaunchConstants.Launcher.pageDotSize, height: LaunchConstants.Launcher.pageDotSize)
+                        .animation(LaunchConstants.Animation.pageSpring, value: currentPage)
                 }
             }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 8)
-            .launchGlass(in: Capsule(), interactive: false)
             .frame(height: LaunchConstants.Launcher.pageDotHeight)
         } else {
             Color.clear.frame(height: LaunchConstants.Launcher.pageDotHeight)
@@ -128,15 +151,15 @@ struct LauncherPageIndicator: View {
 struct LauncherItemView: View {
     let item: LauncherItem
     @ObservedObject var state: AppState
-    @ObservedObject var iconCache: IconCache
+    let layout: LaunchpadLayoutMetrics
     var folderNamespace: Namespace.ID
 
     var body: some View {
         switch item {
         case .app(let app):
-            AppIcon(app: app, state: state, iconCache: iconCache)
+            AppIcon(app: app, state: state, layout: layout)
         case .folder(let folder, let apps):
-            FolderIcon(folder: folder, apps: apps, state: state, iconCache: iconCache, namespace: folderNamespace)
+            FolderIcon(folder: folder, apps: apps, state: state, layout: layout, namespace: folderNamespace)
         }
     }
 }
@@ -144,25 +167,28 @@ struct LauncherItemView: View {
 struct AppIcon: View {
     let app: LaunchApp
     @ObservedObject var state: AppState
-    @ObservedObject var iconCache: IconCache
+    @Environment(\.iconCache) private var iconCache
+    let layout: LaunchpadLayoutMetrics
 
     var body: some View {
         Button {
             state.launch(app)
         } label: {
             VStack(spacing: LaunchConstants.Icon.spacing) {
-                Image(nsImage: iconCache.icon(for: app))
+                Image(nsImage: iconCache.icon(for: app, size: layout.iconSize))
                     .resizable()
-                    .frame(width: LaunchConstants.Icon.imageSize, height: LaunchConstants.Icon.imageSize)
-                    .shadow(color: .black.opacity(0.38), radius: 2, y: 1)
+                    .interpolation(.high)
+                    .frame(width: layout.iconSize, height: layout.iconSize)
+                    .shadow(color: .black.opacity(0.28), radius: 1.5, y: 1)
 
                 Text(app.name)
-                    .font(.system(size: LaunchConstants.Icon.labelFontSize, weight: .regular))
+                    .font(.system(size: LaunchConstants.Icon.labelFontSize, weight: .medium))
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
-                    .frame(width: LaunchConstants.Icon.labelWidth, height: LaunchConstants.Icon.labelHeight, alignment: .top)
+                    .frame(width: layout.labelWidth, height: LaunchConstants.Icon.labelHeight, alignment: .top)
                     .launchLabelStyle()
             }
+            .frame(width: layout.columnWidth)
             .opacity(state.draggedAppID == app.id ? LaunchConstants.Icon.draggedOpacity : 1)
         }
         .buttonStyle(.plain)
@@ -178,46 +204,51 @@ struct FolderIcon: View {
     let folder: LaunchFolder
     let apps: [LaunchApp]
     @ObservedObject var state: AppState
-    @ObservedObject var iconCache: IconCache
+    @Environment(\.iconCache) private var iconCache
+    let layout: LaunchpadLayoutMetrics
     var namespace: Namespace.ID
+
+    private var miniIconSize: CGFloat {
+        layout.iconSize * LaunchConstants.Icon.folderPreviewScale
+    }
 
     var body: some View {
         Button {
-            state.openFolder = folder
+            withAnimation(LaunchConstants.Animation.folderSpring) {
+                state.openFolder = folder
+            }
         } label: {
             VStack(spacing: LaunchConstants.Icon.spacing) {
                 ZStack {
                     RoundedRectangle(cornerRadius: LaunchConstants.Icon.folderCornerRadius)
-                        .fill(.clear)
-                        .frame(width: LaunchConstants.Icon.imageSize, height: LaunchConstants.Icon.imageSize)
-                        .launchGlass(
-                            in: RoundedRectangle(cornerRadius: LaunchConstants.Icon.folderCornerRadius),
-                            interactive: true
-                        )
+                        .frame(width: layout.iconSize, height: layout.iconSize)
+                        .launchpadFolderChrome(cornerRadius: LaunchConstants.Icon.folderCornerRadius)
 
                     LazyVGrid(
                         columns: Array(
-                            repeating: GridItem(.fixed(LaunchConstants.Icon.miniGridItemWidth), spacing: 0),
+                            repeating: GridItem(.fixed(miniIconSize), spacing: 0),
                             count: LaunchConstants.Icon.folderPreviewColumns
                         ),
                         spacing: 0
                     ) {
                         ForEach(apps.prefix(LaunchConstants.Icon.folderPreviewLimit)) { app in
-                            Image(nsImage: iconCache.icon(for: app))
+                            Image(nsImage: iconCache.icon(for: app, size: layout.iconSize))
                                 .resizable()
-                                .frame(width: LaunchConstants.Icon.miniImageSize, height: LaunchConstants.Icon.miniImageSize)
+                                .interpolation(.high)
+                                .frame(width: miniIconSize, height: miniIconSize)
                         }
                     }
                 }
                 .modifier(FolderGlassIDModifier(folderID: folder.id, namespace: namespace, isOpen: state.openFolder?.id == folder.id))
 
                 Text(folder.name)
-                    .font(.system(size: LaunchConstants.Icon.labelFontSize, weight: .regular))
+                    .font(.system(size: LaunchConstants.Icon.labelFontSize, weight: .medium))
                     .lineLimit(2)
                     .multilineTextAlignment(.center)
-                    .frame(width: LaunchConstants.Icon.labelWidth, height: LaunchConstants.Icon.labelHeight, alignment: .top)
+                    .frame(width: layout.labelWidth, height: LaunchConstants.Icon.labelHeight, alignment: .top)
                     .launchLabelStyle()
             }
+            .frame(width: layout.columnWidth)
         }
         .buttonStyle(.plain)
         .onDrop(of: [UTType.text], delegate: FolderDropDelegate(targetID: folder.id, state: state))
@@ -241,13 +272,14 @@ private struct FolderGlassIDModifier: ViewModifier {
 struct FolderOverlay: View {
     let folder: LaunchFolder
     @ObservedObject var state: AppState
-    @StateObject private var iconCache = IconCache()
     var namespace: Namespace.ID
 
-    private let columns = Array(
-        repeating: GridItem(.fixed(LaunchConstants.FolderOverlay.gridItemWidth), spacing: LaunchConstants.FolderOverlay.gridSpacing),
-        count: LaunchConstants.FolderOverlay.columns
-    )
+    private var columns: [GridItem] {
+        Array(
+            repeating: GridItem(.fixed(LaunchConstants.FolderOverlay.gridItemWidth), spacing: LaunchConstants.FolderOverlay.gridSpacing),
+            count: LaunchConstants.FolderOverlay.columns
+        )
+    }
 
     var body: some View {
         if #available(macOS 26, *) {
@@ -270,12 +302,47 @@ struct FolderOverlay: View {
 
             LazyVGrid(columns: columns, spacing: LaunchConstants.FolderOverlay.spacing) {
                 ForEach(state.apps(in: folder)) { app in
-                    AppIcon(app: app, state: state, iconCache: iconCache)
+                    FolderOverlayAppIcon(app: app, state: state)
                 }
             }
             .frame(minHeight: LaunchConstants.FolderOverlay.minGridHeight, alignment: .top)
         }
         .padding(LaunchConstants.FolderOverlay.padding)
         .frame(width: LaunchConstants.FolderOverlay.width)
+    }
+}
+
+struct FolderOverlayAppIcon: View {
+    let app: LaunchApp
+    @ObservedObject var state: AppState
+    @Environment(\.iconCache) private var iconCache
+
+    var body: some View {
+        Button {
+            state.launch(app)
+        } label: {
+            VStack(spacing: LaunchConstants.Icon.spacing) {
+                Image(nsImage: iconCache.icon(for: app, size: LaunchConstants.FolderOverlay.maxIconSize))
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: LaunchConstants.FolderOverlay.maxIconSize, height: LaunchConstants.FolderOverlay.maxIconSize)
+                    .shadow(color: .black.opacity(0.28), radius: 1.5, y: 1)
+
+                Text(app.name)
+                    .font(.system(size: LaunchConstants.Icon.labelFontSize, weight: .medium))
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+                    .frame(width: LaunchConstants.FolderOverlay.labelWidth, height: LaunchConstants.Icon.labelHeight, alignment: .top)
+                    .launchLabelStyle()
+            }
+            .frame(width: LaunchConstants.FolderOverlay.gridItemWidth)
+            .opacity(state.draggedAppID == app.id ? LaunchConstants.Icon.draggedOpacity : 1)
+        }
+        .buttonStyle(.plain)
+        .onDrag {
+            state.draggedAppID = app.id
+            return NSItemProvider(object: app.id as NSString)
+        }
+        .onDrop(of: [UTType.text], delegate: AppDropDelegate(targetID: app.id, state: state))
     }
 }

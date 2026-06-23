@@ -25,7 +25,7 @@ struct SettingsView: View {
                 Text(LaunchConstants.Settings.trackpad)
                 Spacer()
                 Text(state.trackpadGateState.label)
-                    .foregroundStyle(state.trackpadGateState == .exactFourFinger ? .green : .orange)
+                    .foregroundStyle(state.trackpadGateState == .exactPinch ? .green : .orange)
             }
 
             Button(LaunchConstants.Settings.requestAccessibility) {

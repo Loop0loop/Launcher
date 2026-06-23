@@ -16,13 +16,13 @@ enum PermissionState: Equatable {
 
 enum TrackpadGateState: Equatable {
     case unknown
-    case exactFourFinger
+    case exactPinch
     case fallbackPinch
 
     var label: String {
         switch self {
         case .unknown: "Unknown"
-        case .exactFourFinger: "4-finger exact"
+        case .exactPinch: "Pinch exact"
         case .fallbackPinch: "Pinch fallback"
         }
     }

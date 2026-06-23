@@ -4,11 +4,13 @@ import SwiftUI
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let state = AppState()
+    let iconCache = IconCache()
     let trackpadMonitor = TrackpadGestureMonitor()
     var window: NSWindow?
     var launcherLifecycle: LauncherLifecycle?
     var settingsWindow: NSWindow?
     var statusItem: NSStatusItem?
+    private lazy var statusMenu: NSMenu = makeStatusMenu()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -26,7 +28,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
-        window.contentView = NSHostingView(rootView: LauncherView(state: state))
+        let rootView = LauncherView(state: state).environment(\.iconCache, iconCache)
+        let hosting = NSHostingView(rootView: rootView)
+        hosting.safeAreaRegions = []
+        window.contentView = hosting
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.isOpaque = false
         window.backgroundColor = .clear
@@ -40,14 +45,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func makeStatusItem() {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem?.button?.title = LaunchConstants.App.menuBarTitle
+        guard let button = statusItem?.button else { return }
+        button.title = LaunchConstants.App.menuBarTitle
+        button.target = self
+        button.action = #selector(statusBarClicked(_:))
+        button.sendAction(on: [.leftMouseUp, .rightMouseUp])
+    }
+
+    func makeStatusMenu() -> NSMenu {
         let menu = NSMenu()
         menu.addItem(withTitle: LaunchConstants.Menu.toggle, action: #selector(toggleLauncher), keyEquivalent: LaunchConstants.Menu.toggleKey)
         menu.addItem(withTitle: LaunchConstants.Menu.settings, action: #selector(showSettings), keyEquivalent: LaunchConstants.Menu.settingsKey)
         menu.addItem(withTitle: LaunchConstants.Menu.refreshApps, action: #selector(refreshApps), keyEquivalent: LaunchConstants.Menu.refreshKey)
         menu.addItem(.separator())
         menu.addItem(withTitle: LaunchConstants.Menu.quit, action: #selector(NSApp.terminate), keyEquivalent: LaunchConstants.Menu.quitKey)
-        statusItem?.menu = menu
+        return menu
+    }
+
+    @objc func statusBarClicked(_ sender: NSStatusBarButton) {
+        guard let event = NSApp.currentEvent else {
+            toggleLauncher()
+            return
+        }
+
+        if event.type == .rightMouseUp {
+            statusMenu.popUp(
+                positioning: nil,
+                at: NSPoint(x: 0, y: sender.bounds.height + 4),
+                in: sender
+            )
+            return
+        }
+
+        toggleLauncher()
     }
 
     @objc func toggleLauncher() {
@@ -56,6 +86,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @objc func refreshApps() {
         state.refreshApps()
+        iconCache.clear()
     }
 
     @objc func showSettings() {

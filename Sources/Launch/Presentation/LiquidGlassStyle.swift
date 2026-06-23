@@ -15,17 +15,30 @@ extension View {
         }
     }
 
-    @ViewBuilder
-    func launchGlassCapsule(interactive: Bool = true) -> some View {
-        launchGlass(in: Capsule(), interactive: interactive)
+    /// Native Launchpad search field: dark translucent pill, not Liquid Glass.
+    func launchpadSearchChrome() -> some View {
+        background {
+            Capsule()
+                .fill(.black.opacity(LaunchConstants.Launcher.searchFillOpacity))
+                .background(.ultraThinMaterial, in: Capsule())
+        }
+    }
+
+    /// Native Launchpad folder tile: frosted square.
+    func launchpadFolderChrome(cornerRadius: CGFloat) -> some View {
+        background {
+            RoundedRectangle(cornerRadius: cornerRadius)
+                .fill(.white.opacity(LaunchConstants.Icon.folderFillOpacity))
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
+        }
     }
 }
 
 struct LaunchLabelStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .foregroundStyle(.white)
-            .shadow(color: .black.opacity(0.45), radius: 1, y: 0.5)
+            .foregroundStyle(.white.opacity(0.95))
+            .shadow(color: .black.opacity(0.35), radius: 0.5, y: 0.5)
     }
 }
 

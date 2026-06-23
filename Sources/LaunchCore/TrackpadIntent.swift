@@ -26,12 +26,9 @@ public enum TrackpadIntent: Equatable {
         eventTime - lastIntentTime > minimumInterval
     }
 
-    public static func isRecentFourFingerFrame(
-        eventTime: Double,
-        lastFourFingerTime: Double?,
-        window: Double = 0.35
-    ) -> Bool {
-        guard let lastFourFingerTime else { return false }
-        return eventTime >= lastFourFingerTime && eventTime - lastFourFingerTime <= window
+    public static func pinchRadius(ratio: Double, pinchInThreshold: Double = 0.9, pinchOutThreshold: Double = 1.1) -> TrackpadIntent? {
+        if ratio <= pinchInThreshold { return .open }
+        if ratio >= pinchOutThreshold { return .close }
+        return nil
     }
 }

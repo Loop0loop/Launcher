@@ -1,5 +1,6 @@
 import Foundation
 import LaunchCore
+import SwiftUI
 
 @MainActor
 final class AppState: ObservableObject {
@@ -106,7 +107,9 @@ final class AppState: ObservableObject {
     }
 
     func closeFolder() {
-        openFolder = nil
+        withAnimation(LaunchConstants.Animation.folderSpring) {
+            openFolder = nil
+        }
     }
 
     func apps(in folder: LaunchFolder) -> [LaunchApp] {
@@ -149,7 +152,7 @@ final class AppState: ObservableObject {
     }
 
     func setTrackpadGateActive(_ isActive: Bool) {
-        trackpadGateState = isActive ? .exactFourFinger : .fallbackPinch
+        trackpadGateState = isActive ? .exactPinch : .fallbackPinch
     }
 
     func changePage(_ delta: Int) {
