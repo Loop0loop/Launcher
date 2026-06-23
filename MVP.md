@@ -37,11 +37,11 @@ LaunchOS 느낌의 macOS Launchpad 대체 앱. Pro/결제/라이선스 없음.
 
 ## Phase 5 - Trackpad
 
-- [x] 4-finger pinch open via macOS pinch event
+- [x] 4-finger pinch open via MultitouchSupport-gated macOS pinch event
 - [x] Spread close
 - [x] Horizontal swipe page navigation
 
-Note: public `NSEvent` does not expose finger count. Private MultitouchSupport is required if exact 4-finger-only detection is mandatory.
+Note: exact 4-finger gating uses private MultitouchSupport contact counts, with a public `NSEvent` pinch fallback when unavailable.
 
 ## Phase 6 - Polish
 

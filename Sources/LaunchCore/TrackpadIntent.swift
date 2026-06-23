@@ -15,5 +15,13 @@ public enum TrackpadIntent: Equatable {
         if deltaX >= threshold { return .previousPage }
         return nil
     }
-}
 
+    public static func isRecentFourFingerFrame(
+        eventTime: Double,
+        lastFourFingerTime: Double?,
+        window: Double = 0.35
+    ) -> Bool {
+        guard let lastFourFingerTime else { return false }
+        return eventTime >= lastFourFingerTime && eventTime - lastFourFingerTime <= window
+    }
+}
