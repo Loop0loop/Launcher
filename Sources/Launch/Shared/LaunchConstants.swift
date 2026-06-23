@@ -169,6 +169,12 @@ enum LaunchConstants {
         static let f4Modifiers: UInt32 = 0
     }
 
+    enum HotCorner {
+        static let activationSize: CGFloat = 6
+        static let pollInterval: TimeInterval = 0.12
+        static let cooldown: TimeInterval = 1.0
+    }
+
     enum Multitouch {
         static let frameworkPath = "/System/Library/PrivateFrameworks/MultitouchSupport.framework/MultitouchSupport"
         static let createListSymbol = "MTDeviceCreateList"

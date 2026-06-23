@@ -7,6 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let iconCache = IconCache()
     let trackpadMonitor = TrackpadGestureMonitor()
     let globalHotKey = GlobalHotKeyAdapter()
+    let hotCornerMonitor = HotCornerMonitor()
     var window: NSWindow?
     var launcherLifecycle: LauncherLifecycle?
     var settingsWindow: NSWindow?
@@ -20,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         makeStatusItem()
         state.requestAccessibilityPermission()
         startGlobalHotKey()
+        startHotCornerMonitor()
         startTrackpadMonitor()
         startKeyMonitor()
     }
@@ -178,6 +180,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         state.setGlobalHotKeyActive(status.toggle)
         state.setF4KeyActive(status.f4)
+    }
+
+    func startHotCornerMonitor() {
+        hotCornerMonitor.start { [weak self] in
+            self?.launcherLifecycle?.show()
+        }
     }
 
     func startKeyMonitor() {

@@ -66,7 +66,7 @@ Run: `Scripts/build-app.sh`, then open `.build/Launch.app`.
 - [x] Quick right-click menu
 - [x] Custom app sources
 - [x] Customizable grid layout
-- [ ] Hot corners
+- [x] Hot corners (top-left MVP)
 - [ ] Drag apps to Dock
 - [ ] Import native Launchpad layout
 - [ ] Vertical scroll view
