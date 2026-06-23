@@ -34,4 +34,10 @@ let reorderedFolderResult = FolderLayout.createFolder(
 )
 assert(reorderedFolderResult.order == ["folder-2", "b"])
 
+assert(TrackpadIntent.pinch(magnification: -0.1) == .open)
+assert(TrackpadIntent.pinch(magnification: 0.1) == .close)
+assert(TrackpadIntent.pinch(magnification: 0.01) == nil)
+assert(TrackpadIntent.horizontalSwipe(deltaX: -1) == .nextPage)
+assert(TrackpadIntent.horizontalSwipe(deltaX: 1) == .previousPage)
+
 print("LaunchCheck OK")

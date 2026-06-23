@@ -379,8 +379,39 @@ struct VisualEffectView: NSViewRepresentable {
 }
 
 @MainActor
+final class TrackpadGestureMonitor {
+    private var monitors: [Any] = []
+
+    func start(onIntent: @escaping @MainActor (TrackpadIntent) -> Void) {
+        let mask: NSEvent.EventTypeMask = [.magnify, .swipe]
+
+        let handler: (NSEvent) -> Void = { event in
+            Task { @MainActor in
+                if event.type == .magnify, let intent = TrackpadIntent.pinch(magnification: event.magnification) {
+                    onIntent(intent)
+                } else if event.type == .swipe, let intent = TrackpadIntent.horizontalSwipe(deltaX: event.deltaX) {
+                    onIntent(intent)
+                }
+            }
+        }
+
+        if let local = NSEvent.addLocalMonitorForEvents(matching: mask, handler: { event in
+            handler(event)
+            return event
+        }) {
+            monitors.append(local)
+        }
+
+        if let global = NSEvent.addGlobalMonitorForEvents(matching: mask, handler: handler) {
+            monitors.append(global)
+        }
+    }
+}
+
+@MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let state = AppState()
+    let trackpadMonitor = TrackpadGestureMonitor()
     var window: NSWindow?
     var statusItem: NSStatusItem?
 
@@ -388,6 +419,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         makeWindow()
         makeStatusItem()
+        startTrackpadMonitor()
         showLauncher()
     }
 
@@ -425,8 +457,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
 
+    func hideLauncher() {
+        window?.orderOut(nil)
+    }
+
     @objc func refreshApps() {
         state.refreshApps()
+    }
+
+    func startTrackpadMonitor() {
+        trackpadMonitor.start { [weak self] intent in
+            guard let self else { return }
+            switch intent {
+            case .open:
+                self.showLauncher()
+            case .close:
+                self.hideLauncher()
+            case .previousPage:
+                self.state.changePage(-1)
+            case .nextPage:
+                self.state.changePage(1)
+            }
+        }
     }
 }
 
