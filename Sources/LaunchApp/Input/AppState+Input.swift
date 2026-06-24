@@ -29,7 +29,7 @@ extension AppState {
         } else if !query.isEmpty {
             clearSearch()
         } else {
-            closeLauncher?()
+            actions.close()
         }
     }
 
@@ -38,29 +38,15 @@ extension AppState {
     }
 
     func registerSearchBar(_ bar: LauncherSearchBarView) {
-        searchBarView = bar
-        searchField = bar.textField
+        searchFocus.register(bar)
     }
 
     func focusSearchField() {
-        guard let searchField else {
-            LaunchLog.line("search focus skipped field=nil")
-            return
-        }
-        searchField.isEditable = true
-        searchField.isSelectable = true
-        searchField.isEnabled = true
-        searchField.window?.makeKey()
-        let accepted = searchField.window?.makeFirstResponder(searchField) ?? false
-        shouldFocusSearchOnShow = false
-        LaunchLog.line("search focus ok=\(accepted)")
+        searchFocus.focus()
     }
 
     func isSearchFieldFocused() -> Bool {
-        guard let searchField, let firstResponder = searchField.window?.firstResponder else { return false }
-        if firstResponder === searchField { return true }
-        if firstResponder === searchField.currentEditor() { return true }
-        return false
+        searchFocus.isFocused()
     }
 
     func moveSelection(by delta: Int) {

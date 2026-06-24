@@ -12,6 +12,10 @@ final class TrackpadGestureMonitor {
         onGateStatus: @escaping @MainActor (Bool) -> Void,
         onIntent: @escaping @MainActor (TrackpadIntent) -> Void
     ) {
+        guard monitors.isEmpty else {
+            onGateStatus(pinchMonitor.isReady)
+            return
+        }
         LaunchLog.line("trackpad monitor start")
         pinchMonitor.start { intent in
             LaunchLog.line("private pinch intent=\(intent)")

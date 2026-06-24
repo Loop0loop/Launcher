@@ -1,4 +1,4 @@
-import AppKit
+import CoreGraphics
 import Foundation
 import LaunchCore
 
@@ -25,9 +25,7 @@ final class AppState: ObservableObject {
     @Published var trackpadGateState: TrackpadGateState = .unknown
     @Published var launcherVisible = false
     @Published var pageDragOffset: CGFloat = 0
-    weak var searchField: NSTextField?
-    weak var searchBarView: LauncherSearchBarView?
-    var shouldFocusSearchOnShow = false
+    let searchFocus = SearchFocusController()
     @Published var appSourcePaths = AppSourceStore.load()
     @Published var hiddenAppIDs = Set(LayoutPersistenceAdapter.stringArray(forKey: LaunchConstants.Storage.hiddenAppsKey))
     @Published var gridLayout = GridLayoutStore.load() {
@@ -49,7 +47,7 @@ final class AppState: ObservableObject {
         didSet {
             guard oldValue != windowBrowsingMode else { return }
             UserDefaults.standard.set(windowBrowsingMode, forKey: LaunchConstants.Storage.windowBrowsingModeKey)
-            applyWindowBrowsingMode?()
+            actions.applyWindowBrowsingMode()
         }
     }
     @Published var appearance = AppearanceStore.load() {
@@ -64,14 +62,7 @@ final class AppState: ObservableObject {
     var pageBeforeSearch = 0
     var selectionBeforeSearch: String?
     var pageChangeLockedUntil = Date.distantPast
-    var closeLauncher: (() -> Void)?
-    var dismissLauncher: (() -> Void)?
-    var launchApp: ((LaunchApp) -> Void)?
-    var showAppInFinder: ((LaunchApp) -> Void)?
-    var moveAppToTrash: ((LaunchApp) -> Void)?
-    var addAppToDock: ((LaunchApp) -> Void)?
-    var chooseAppSource: (() -> Void)?
-    var applyWindowBrowsingMode: (() -> Void)?
+    var actions = LauncherActions()
 
     init() {
         folders = layoutStore.loadFolders()

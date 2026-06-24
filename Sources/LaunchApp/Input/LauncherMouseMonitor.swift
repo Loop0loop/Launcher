@@ -147,7 +147,7 @@ final class LauncherMouseMonitor {
         guard let window, let contentView = window.contentView else { return false }
         let point = contentView.convert(event.locationInWindow, from: nil)
 
-        if let bar = state?.searchBarView {
+        if let bar = state?.searchFocus.barView {
             let local = bar.convert(point, from: contentView)
             if bar.bounds.contains(local) {
                 return true
@@ -202,7 +202,10 @@ final class LauncherMouseMonitor {
         let gridTop = layout.topChromeHeight
         guard yFromTop >= gridTop, yFromTop <= gridTop + gridHeight else { return false }
 
-        let column = Int((point.x / max(size.width, 1)) * CGFloat(layout.columns))
+        let xInGrid = point.x - layout.horizontalPadding
+        guard xInGrid >= 0, xInGrid <= layout.gridWidth else { return false }
+
+        let column = Int(xInGrid / max(layout.columnWidth, 1))
         let row = Int(((yFromTop - gridTop) / max(gridHeight, 1)) * CGFloat(layout.rows))
         guard column >= 0, column < layout.columns, row >= 0, row < layout.rows else { return false }
 

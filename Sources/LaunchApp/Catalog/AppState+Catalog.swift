@@ -24,7 +24,7 @@ extension AppState {
     }
 
     func requestAppSource() {
-        chooseAppSource?()
+        actions.chooseAppSource()
     }
 
     func addAppSource(_ path: String) {

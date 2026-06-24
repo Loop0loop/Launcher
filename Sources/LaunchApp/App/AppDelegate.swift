@@ -65,14 +65,16 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         launcherMouseMonitor.configure(window: window, state: state)
         launcherLifecycle = LauncherLifecycle(state: state, window: window, mouseMonitor: launcherMouseMonitor)
         LaunchLog.line("window created frame=\(window.frame)")
-        state.closeLauncher = { [weak self] in self?.launcherLifecycle?.hide() }
-        state.dismissLauncher = { [weak self] in self?.launcherLifecycle?.dismiss() }
-        state.launchApp = { [weak self] app in self?.launcherLifecycle?.launch(app) }
-        state.showAppInFinder = { [weak self] app in self?.launcherLifecycle?.revealInFinder(app) }
-        state.moveAppToTrash = { [weak self] app in self?.confirmMoveToTrash(app) }
-        state.addAppToDock = { app in AppSystemAdapter.addToDock(app) }
-        state.chooseAppSource = { [weak self] in self?.chooseAppSource() }
-        state.applyWindowBrowsingMode = { [weak self] in self?.launcherLifecycle?.applyWindowBrowsingMode() }
+        state.actions = LauncherActions(
+            close: { [weak self] in self?.launcherLifecycle?.hide() },
+            dismiss: { [weak self] in self?.launcherLifecycle?.dismiss() },
+            launch: { [weak self] app in self?.launcherLifecycle?.launch(app) },
+            showInFinder: { [weak self] app in self?.launcherLifecycle?.revealInFinder(app) },
+            moveToTrash: { [weak self] app in self?.confirmMoveToTrash(app) },
+            addToDock: { app in AppSystemAdapter.addToDock(app) },
+            chooseAppSource: { [weak self] in self?.chooseAppSource() },
+            applyWindowBrowsingMode: { [weak self] in self?.launcherLifecycle?.applyWindowBrowsingMode() }
+        )
     }
 
     func makeStatusItem() {

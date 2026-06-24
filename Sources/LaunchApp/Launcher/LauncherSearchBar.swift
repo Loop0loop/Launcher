@@ -173,8 +173,19 @@ final class LauncherSearchNSTextField: NSTextField {
     override var acceptsFirstResponder: Bool { true }
 
     override func mouseDown(with event: NSEvent) {
+        (window as? LauncherWindow)?.allowsKeyboardFocus = true
         window?.makeKey()
         window?.makeFirstResponder(self)
         super.mouseDown(with: event)
+    }
+
+    override func resignFirstResponder() -> Bool {
+        let resigned = super.resignFirstResponder()
+        // Editing ended — drop key focus so the launcher stops holding the keyboard.
+        if resigned, let window = window as? LauncherWindow {
+            window.allowsKeyboardFocus = false
+            window.resignKey()
+        }
+        return resigned
     }
 }

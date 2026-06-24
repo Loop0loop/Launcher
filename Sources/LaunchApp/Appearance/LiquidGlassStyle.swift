@@ -56,6 +56,34 @@ extension View {
         }
     }
 
+    /// Tahoe-style Launchpad folder panel: a floating pane with a quiet glass edge.
+    func tahoeFolderPanelChrome(
+        cornerRadius: CGFloat = LaunchConstants.FolderOverlay.cornerRadius,
+        usesMaterial: Bool = true
+    ) -> some View {
+        background {
+            let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            shape
+                .fill(.white.opacity(usesMaterial ? 0.12 : 0.05))
+                .background {
+                    if usesMaterial {
+                        shape.fill(.ultraThinMaterial)
+                    }
+                }
+                .overlay(alignment: .top) {
+                    shape.strokeBorder(
+                        LinearGradient(
+                            colors: [.white.opacity(0.5), .white.opacity(0.08)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 0.75
+                    )
+                }
+                .shadow(color: .black.opacity(0.28), radius: 28, y: 18)
+        }
+    }
+
     /// Settings panel card: frosted glass with subtle edge highlight.
     func settingsGlassCard(cornerRadius: CGFloat = LaunchConstants.Settings.cardCornerRadius) -> some View {
         background {

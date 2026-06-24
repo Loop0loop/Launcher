@@ -151,7 +151,7 @@ struct LauncherSearchField: View {
     var body: some View {
         LauncherSearchBarRepresentable(text: $query) { bar in
             state.registerSearchBar(bar)
-            if state.shouldFocusSearchOnShow {
+            if state.searchFocus.shouldFocusOnShow {
                 DispatchQueue.main.async {
                     state.focusSearchField()
                 }
@@ -357,11 +357,17 @@ struct FolderOverlay: View {
     @ViewBuilder
     private var folderContent: some View {
         if #available(macOS 26, *) {
-            folderPanel
-                .launchGlass(in: RoundedRectangle(cornerRadius: LaunchConstants.FolderOverlay.cornerRadius), interactive: false)
+            GlassEffectContainer(spacing: LaunchConstants.FolderOverlay.spacing) {
+                folderPanel
+                    .launchGlass(
+                        in: RoundedRectangle(cornerRadius: LaunchConstants.FolderOverlay.cornerRadius, style: .continuous),
+                        interactive: false
+                    )
+                    .tahoeFolderPanelChrome(usesMaterial: false)
+            }
         } else {
             folderPanel
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: LaunchConstants.FolderOverlay.cornerRadius))
+                .tahoeFolderPanelChrome()
         }
     }
 
@@ -393,11 +399,13 @@ struct FolderTitleField: View {
             .font(.system(size: LaunchConstants.FolderOverlay.titleFontSize, weight: .semibold))
             .multilineTextAlignment(.center)
             .foregroundStyle(.white.opacity(0.95))
-            .padding(.horizontal, 16)
-            .padding(.vertical, 7)
+            .shadow(color: .black.opacity(0.3), radius: 0.5, y: 0.5)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
             .frame(maxWidth: LaunchConstants.FolderOverlay.width - 120)
-            .launchGlass(in: Capsule(), interactive: true)
+            .contentShape(Rectangle())
             .onSubmit(commit)
+            .onDisappear(perform: commit)
     }
 }
 

@@ -8,7 +8,15 @@ final class LauncherLifecycle {
     private weak var mouseMonitor: LauncherMouseMonitor?
     private var previousApp: NSRunningApplication?
     private var menuBarHidden = false
-    private var hideToken = UUID()
+    private var phase: Phase = .hidden
+    private var transitionToken = UUID()
+
+    private enum Phase {
+        case hidden
+        case showing
+        case shown
+        case hiding
+    }
 
     init(state: AppState, window: NSWindow, mouseMonitor: LauncherMouseMonitor? = nil) {
         self.state = state
@@ -17,7 +25,7 @@ final class LauncherLifecycle {
     }
 
     var isVisible: Bool {
-        window.isVisible && state.launcherVisible
+        phase == .showing || phase == .shown || (window.isVisible && state.launcherVisible)
     }
 
     func toggle() {
@@ -29,18 +37,22 @@ final class LauncherLifecycle {
     }
 
     func show() {
-        guard !isVisible else { return }
+        guard phase != .showing, phase != .shown else { return }
 
-        hideToken = UUID()
+        let token = UUID()
+        transitionToken = token
+        phase = .showing
         rememberPreviousApp()
         state.query = ""
         state.openFolder = nil
         state.clearSelection()
 
-        applyWindowBrowsingMode()
         state.launcherVisible = true
         state.pageDragOffset = 0
-        state.shouldFocusSearchOnShow = true
+        // Don't grab the keyboard on open — focus the search field only when it's clicked.
+        state.searchFocus.shouldFocusOnShow = false
+        (window as? LauncherWindow)?.allowsKeyboardFocus = false
+        applyWindowBrowsingMode()
 
         preparePresentationLayer()
         setPresentationScale(LaunchConstants.Lifecycle.hiddenScale)
@@ -49,22 +61,25 @@ final class LauncherLifecycle {
         NSApp.activate(ignoringOtherApps: true)
         mouseMonitor?.setEnabled(true)
 
-        runPresentationAnimation(toVisible: true) {
-            // Focus is applied once via shouldFocusSearchOnShow when the bar mounts.
+        runPresentationAnimation(toVisible: true) { [weak self] in
+            guard let self, self.transitionToken == token else { return }
+            self.phase = .shown
         }
         LaunchLog.line("lifecycle show requested visible=\(state.launcherVisible)")
     }
 
     func hide() {
-        guard window.isVisible, state.launcherVisible else { return }
+        guard phase != .hidden, phase != .hiding, window.isVisible else { return }
         LaunchLog.line("lifecycle hide requested visible=\(state.launcherVisible)")
         mouseMonitor?.setEnabled(false)
 
         let token = UUID()
-        hideToken = token
+        transitionToken = token
+        phase = .hiding
 
         runPresentationAnimation(toVisible: false) { [weak self] in
-            guard let self, self.hideToken == token else { return }
+            guard let self, self.transitionToken == token else { return }
+            self.phase = .hidden
             self.state.launcherVisible = false
             self.setMenuBarHidden(false)
             self.window.orderOut(nil)
@@ -74,6 +89,8 @@ final class LauncherLifecycle {
     }
 
     func dismiss() {
+        transitionToken = UUID()
+        phase = .hidden
         mouseMonitor?.setEnabled(false)
         setMenuBarHidden(false)
         state.launcherVisible = false
@@ -85,8 +102,12 @@ final class LauncherLifecycle {
         AppSystemAdapter.launch(app)
         if window.isVisible {
             mouseMonitor?.setEnabled(false)
+            let token = UUID()
+            transitionToken = token
+            phase = .hiding
             runPresentationAnimation(toVisible: false) { [weak self] in
-                guard let self else { return }
+                guard let self, self.transitionToken == token else { return }
+                self.phase = .hidden
                 self.state.launcherVisible = false
                 self.setMenuBarHidden(false)
                 self.window.orderOut(nil)

@@ -160,14 +160,14 @@ enum LaunchConstants {
     enum FolderOverlay {
         static let columns = 4
         static let gridItemWidth: CGFloat = 112
-        static let gridSpacing: CGFloat = 18
-        static let spacing: CGFloat = 22
-        static let titleFontSize: CGFloat = 24
-        static let minGridHeight: CGFloat = 150
-        static let padding: CGFloat = 30
-        static let width: CGFloat = 560
-        static let cornerRadius: CGFloat = 24
-        static let maxIconSize: CGFloat = 88
+        static let gridSpacing: CGFloat = 20
+        static let spacing: CGFloat = 26
+        static let titleFontSize: CGFloat = 25
+        static let minGridHeight: CGFloat = 170
+        static let padding: CGFloat = 36
+        static let width: CGFloat = 600
+        static let cornerRadius: CGFloat = 34
+        static let maxIconSize: CGFloat = 86
         static let labelWidth: CGFloat = 104
     }
 

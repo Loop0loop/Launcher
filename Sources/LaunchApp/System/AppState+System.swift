@@ -2,19 +2,19 @@ import LaunchCore
 
 extension AppState {
     func launch(_ app: LaunchApp) {
-        launchApp?(app)
+        actions.launch(app)
     }
 
     func revealInFinder(_ app: LaunchApp) {
-        showAppInFinder?(app)
+        actions.showInFinder(app)
     }
 
     func moveToTrash(_ app: LaunchApp) {
-        moveAppToTrash?(app)
+        actions.moveToTrash(app)
     }
 
     func addToDock(_ app: LaunchApp) {
-        addAppToDock?(app)
+        actions.addToDock(app)
     }
 
     func hide(_ app: LaunchApp) {
