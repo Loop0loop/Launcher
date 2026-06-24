@@ -20,11 +20,13 @@ extension View {
         }
     }
 
-    /// 닫힌 폴더 타일: macOS 26 `.clear` real glass (구버전 material 폴백). 엣지/틴트 없음 —
-    /// 시스템 글래스가 굴절·스페큘러를 그린다. 위에 덧칠하면 우윳빛 카드가 된다.
+    /// 닫힌 폴더 타일: `.regular` real glass (덜 투명) + 폴백은 진한 material.
+    /// `.clear`는 너무 투명해서 타일 형태가 잘 안 보였음 → 살짝 frosted 한 틴트로 형태를 잡음.
     func launchpadFolderChrome(cornerRadius: CGFloat) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        return launchGlass(in: shape, interactive: false, clear: true)
+        return launchGlass(in: shape, interactive: false, clear: false, fallbackMaterial: .regularMaterial)
+            .overlay(shape.fill(.white.opacity(0.06)))
+            .overlay(shape.strokeBorder(.white.opacity(0.12), lineWidth: 0.5))
     }
 
     /// 열린 폴더 패널 크롬: 소프트 섀도만. 글래스·엣지·스페큘러는 상위 launchGlass가

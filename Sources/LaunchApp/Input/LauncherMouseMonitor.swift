@@ -1,7 +1,7 @@
 import AppKit
 
 /// Empty-space page swiping only. Icon dragging is owned by SwiftUI `DragGesture`
-/// (see GridDragController); dismissal and folder close are owned by SwiftUI tap layers.
+/// (see `LauncherDragModifier`); dismissal and folder close are owned by SwiftUI tap layers.
 /// When an icon drag is active (`isDraggingLauncherItem`) paging backs off so the grid
 /// doesn't shift under the dragged tile.
 @MainActor

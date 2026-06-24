@@ -29,7 +29,7 @@ final class AppState: ObservableObject {
     @Published var pageDragOffset: CGFloat = 0
     let searchFocus = SearchFocusController()
     @Published var appSourcePaths = AppSourceStore.load()
-    @Published var hiddenAppIDs = Set(LayoutPersistenceAdapter.stringArray(forKey: LaunchConstants.Storage.hiddenAppsKey))
+    @Published var hiddenAppIDs = Set(UserDefaults.standard.stringArray(forKey: LaunchConstants.Storage.hiddenAppsKey) ?? [])
     @Published var gridLayout = GridLayoutStore.load() {
         didSet {
             guard oldValue != gridLayout else { return }
@@ -81,7 +81,6 @@ final class AppState: ObservableObject {
     }
     @Published var order: [String] = []
 
-    let layoutStore = LayoutStore()
     var pageBeforeSearch = 0
     var selectionBeforeSearch: String?
     var pageChangeLockedUntil = Date.distantPast
@@ -89,8 +88,8 @@ final class AppState: ObservableObject {
     var actions = LauncherActions()
 
     init() {
-        folders = layoutStore.loadFolders()
-        order = layoutStore.loadOrder()
+        folders = LayoutStore.loadFolders()
+        order = LayoutStore.loadOrder()
         refreshLoginItemStatus()
         refreshAccessibilityStatus()
         refreshApps()

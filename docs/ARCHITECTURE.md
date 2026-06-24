@@ -35,6 +35,10 @@ Sources/LaunchCore
 Sources/LaunchCheck
 ```
 
+Keep source files focused. Production Swift files should stay under 300 lines
+unless they are temporary phase work; split large files by product domain before
+adding new behavior.
+
 ## Core Model
 
 `LaunchCore` contains rules that should be runnable without a GUI:
@@ -55,7 +59,7 @@ It stores:
 
 - app catalog and hidden apps
 - folders and root order
-- current page, selection, drag id
+- current page, selection, grid drag state
 - search query
 - permission states
 - appearance and display settings
@@ -179,7 +183,7 @@ Input is split by source:
 - `GlobalHotKeyAdapter`: Carbon global hot keys.
 - `HotCornerMonitor`: pointer polling.
 - `TrackpadGestureMonitor`: local/global AppKit gesture monitors plus optional private multitouch contact counts.
-- `LauncherMouseMonitor`: launcher-only mouse hit testing, background dismiss, page drag.
+- `LauncherMouseMonitor`: launcher-only empty-space page drag. Icon drag is SwiftUI gesture state.
 - `AppDelegate.handleLauncherKey`: keyboard navigation and type-to-search.
 - `SearchFocusController`: AppKit search field refs and focus state.
 
@@ -196,12 +200,17 @@ Mouse flow:
 
 ```text
 local mouse monitor
-  -> ignore search and item cells
-  -> page drag when on background
-  -> background click dismiss
+  -> page drag when on launcher background
+  -> back off while an icon drag is active
+
+SwiftUI tap / drag gestures
+  -> empty-space dismiss
+  -> folder dim dismiss
+  -> icon drag / folder create / folder add / reorder
 ```
 
-The mouse monitor computes item hits using real grid padding/column metrics.
+Grid drag uses `LaunchpadLayoutMetrics` to map pointer coordinates to icon
+targets and reorder slots.
 
 ## Rendering
 
@@ -211,7 +220,7 @@ Main surface:
 
 ```text
 LauncherBackgroundView
-LauncherSearchField
+LauncherSearchBarRepresentable
 PagedGridView or search results grid
 LauncherPageControl
 FolderOverlay when openFolder != nil
@@ -222,6 +231,9 @@ available. Older systems fall back to `ultraThinMaterial`.
 
 Search is an `NSViewRepresentable` AppKit search bar because SwiftUI focus and
 hit testing were too fragile for this app.
+
+Launcher rendering is split by domain under `Sources/LaunchApp/Launcher`:
+root composition, grids, controls, item views, folder overlay, and search bar.
 
 ## Catalog And Layout
 

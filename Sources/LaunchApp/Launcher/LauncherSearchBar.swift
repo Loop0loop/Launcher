@@ -32,7 +32,8 @@ final class LauncherSearchBarView: NSView {
 
         chromeView.material = .hudWindow
         chromeView.blendingMode = .withinWindow
-        chromeView.state = .active
+        // Only show the vibrant/active chrome while the field is focused (clicked).
+        chromeView.state = .inactive
         chromeView.wantsLayer = true
         chromeView.layer?.cornerRadius = LaunchConstants.Launcher.searchHeight / 2
         chromeView.layer?.masksToBounds = true
@@ -92,7 +93,14 @@ final class LauncherSearchBarView: NSView {
 
         let textX = iconView.frame.maxX + 8
         let textWidth = max(0, clearButton.frame.minX - 8 - textX)
-        textField.frame = NSRect(x: textX, y: 0, width: textWidth, height: bounds.height)
+        // Vertically center the single-line text (NSTextField top-aligns by default).
+        let font = textField.font ?? NSFont.systemFont(ofSize: LaunchConstants.Launcher.searchFontSize)
+        let textHeight = ceil(font.ascender - font.descender) + 4
+        textField.frame = NSRect(x: textX, y: (bounds.height - textHeight) / 2, width: textWidth, height: textHeight)
+    }
+
+    func setActive(_ active: Bool) {
+        chromeView.state = active ? .active : .inactive
     }
 
     func updateText(_ text: String) {
@@ -182,5 +190,17 @@ final class LauncherSearchNSTextField: NSTextField {
         window?.makeKey()
         window?.makeFirstResponder(self)
         super.mouseDown(with: event)
+    }
+
+    override func becomeFirstResponder() -> Bool {
+        let ok = super.becomeFirstResponder()
+        if ok { (superview as? LauncherSearchBarView)?.setActive(true) }
+        return ok
+    }
+
+    override func resignFirstResponder() -> Bool {
+        let ok = super.resignFirstResponder()
+        if ok { (superview as? LauncherSearchBarView)?.setActive(false) }
+        return ok
     }
 }

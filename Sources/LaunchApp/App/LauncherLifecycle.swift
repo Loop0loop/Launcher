@@ -54,8 +54,8 @@ final class LauncherLifecycle {
 
         state.launcherVisible = true
         state.pageDragOffset = 0
-        // Nonactivating panel can hold keyboard focus, so type-ahead works on open.
-        state.searchFocus.shouldFocusOnShow = true
+        // Focus (and the active search chrome) only when the user clicks the field.
+        state.searchFocus.shouldFocusOnShow = false
         applyWindowBrowsingMode()
 
         preparePresentationLayer()

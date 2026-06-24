@@ -61,7 +61,7 @@ extension AppState {
             order: visibleItems.map(\.id)
         )
         folders = result.folders
-        layoutStore.saveFolders(folders)
+        LayoutStore.saveFolders(folders)
         saveOrder(result.order)
         openFolder = folders.last
     }
@@ -77,7 +77,7 @@ extension AppState {
             order: visibleItems.map(\.id)
         )
         folders = result.folders
-        layoutStore.saveFolders(folders)
+        LayoutStore.saveFolders(folders)
         saveOrder(result.order)
         openFolder = folders.first { $0.id == folderID }
     }
@@ -90,7 +90,7 @@ extension AppState {
             order: visibleItems.map(\.id)
         )
         folders = result.folders
-        layoutStore.saveFolders(folders)
+        LayoutStore.saveFolders(folders)
         saveOrder(result.order)
         openFolder = folders.first { $0.id == folderID }
     }
@@ -99,7 +99,7 @@ extension AppState {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let index = folders.firstIndex(where: { $0.id == folderID }) else { return }
         folders[index].name = trimmed
-        layoutStore.saveFolders(folders)
+        LayoutStore.saveFolders(folders)
         // Guard prevents FolderTitleField.onDisappear commit from re-opening the folder we just closed.
         if openFolder?.id == folderID {
             openFolder = folders[index]
@@ -116,7 +116,7 @@ extension AppState {
 
     func saveOrder(_ order: [String]? = nil) {
         self.order = order ?? visibleItems.map(\.id)
-        layoutStore.saveOrder(self.order)
+        LayoutStore.saveOrder(self.order)
     }
 
     func applyNameSort() {

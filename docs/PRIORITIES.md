@@ -33,6 +33,8 @@ swift run Launch
   - app target creates a folder
   - folder target adds the app to that folder
   - root reorder is separate from folder create/add
+- Grid icon drag is owned by SwiftUI gesture state, not pasteboard drag/drop.
+  `LauncherMouseMonitor` only handles empty-space page dragging.
 
 Required checks:
 
@@ -102,6 +104,8 @@ Use these when reviewing code:
 - Avoid force casts and `try!`.
 - Guard private API usage with public fallback.
 - Add one `LaunchCheck` assertion for new pure behavior.
+- Keep production Swift files under 300 lines. When a file grows beyond that,
+  split by domain before adding more behavior.
 
 Official references:
 
@@ -117,11 +121,11 @@ Official references:
 
 - Keep lifecycle phase/token behavior stable.
 - Keep grid hit testing aligned with `LaunchpadLayoutMetrics`.
+- Split large UI/AppKit files by domain before adding behavior.
 - Reduce high-volume `LaunchLog.line` calls after input UX settles.
 - Keep folder UX focused: close by dim click, create, add, remove, dissolve.
 - Fix stale drag opacity before adding larger drag features.
-- Keep P1 drag/drop fixes small; do not introduce a new drag engine in the
-  same phase.
+- Keep grid drag geometry centralized in `LaunchpadLayoutMetrics`-based helpers.
 
 ### Next
 

@@ -1,3 +1,4 @@
+import Foundation
 import LaunchCore
 
 extension AppState {
@@ -30,6 +31,6 @@ extension AppState {
     }
 
     fileprivate func persistHiddenApps() {
-        LayoutPersistenceAdapter.set(Array(hiddenAppIDs), forKey: LaunchConstants.Storage.hiddenAppsKey)
+        UserDefaults.standard.set(Array(hiddenAppIDs), forKey: LaunchConstants.Storage.hiddenAppsKey)
     }
 }

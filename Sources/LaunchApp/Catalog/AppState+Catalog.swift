@@ -10,11 +10,11 @@ extension AppState {
 
     func refreshApps() {
         apps = CatalogStore.scanApps(extraRoots: appSourcePaths)
-        let cleanup = layoutStore.cleanup(folders: folders, order: order, validAppIDs: Set(apps.map(\.id)))
+        let cleanup = LayoutStore.cleanup(folders: folders, order: order, validAppIDs: Set(apps.map(\.id)))
         folders = cleanup.folders
         openFolder = openFolder.flatMap { open in folders.first { $0.id == open.id } }
         order = cleanup.order
-        layoutStore.saveFolders(folders)
+        LayoutStore.saveFolders(folders)
         saveOrder()
         ensureSelection()
     }
