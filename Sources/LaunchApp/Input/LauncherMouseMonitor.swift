@@ -29,6 +29,7 @@ final class LauncherMouseMonitor {
         if !enabled {
             dragOffset = 0
             state?.pageDragOffset = 0
+            state?.cancelDrag()
         }
     }
 
@@ -58,6 +59,10 @@ final class LauncherMouseMonitor {
     }
 
     private func handleMouseDown(_ event: NSEvent, state: AppState) -> NSEvent? {
+        // Clear stale drag state from a previous gesture whose drop never fired; .onDrag re-sets it if a real drag starts.
+        state.cancelDrag()
+        LaunchLog.line("mouse down x=\(event.locationInWindow.x) y=\(event.locationInWindow.y) folderOpen=\(state.openFolder?.id ?? "nil") query=\(state.query.isEmpty ? "empty" : "set")")
+
         if hitsSearchBar(event) {
             LaunchLog.line("mouse search click down")
             state.focusSearchField()
@@ -105,6 +110,7 @@ final class LauncherMouseMonitor {
         defer {
             dragOffset = 0
             state.pageDragOffset = 0
+            state.cancelDrag()
             mouseDownStartedOnItem = false
         }
 

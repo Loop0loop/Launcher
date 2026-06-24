@@ -9,3 +9,4 @@ pnpm-lock.yaml
 .cursor
 video.mp4
 .claude
+.pnpm-store

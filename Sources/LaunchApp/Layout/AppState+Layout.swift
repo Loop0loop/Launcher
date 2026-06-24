@@ -127,29 +127,39 @@ extension AppState {
         saveOrder(sortedRootIDs)
     }
 
-    func canDropApp(on targetID: String) -> Bool {
+    func beginDrag(_ appID: String) {
+        draggedAppID = appID
+    }
+
+    func canDropApp(onApp targetID: String) -> Bool {
         guard query.isEmpty, openFolder == nil else { return false }
         guard let draggedID = draggedAppID, draggedID != targetID, appByID(draggedID) != nil else { return false }
-        return appByID(targetID) != nil || folders.contains { $0.id == targetID }
+        return appByID(targetID) != nil
+    }
+
+    func canDropApp(onFolder targetID: String) -> Bool {
+        guard query.isEmpty, openFolder == nil else { return false }
+        guard let draggedID = draggedAppID, appByID(draggedID) != nil else { return false }
+        return folders.contains { $0.id == targetID }
     }
 
     func cancelDrag() {
+        finishDrag()
+    }
+
+    func finishDrag() {
         draggedAppID = nil
     }
 
-    func dropApp(_ draggedID: String, on targetID: String) {
-        guard canDropApp(on: targetID), draggedID == draggedAppID else { return }
-        if draggedID == targetID { return }
+    func dropAppOnApp(_ draggedID: String, targetID: String) {
+        guard canDropApp(onApp: targetID), draggedID == draggedAppID else { return }
+        LaunchLog.line("drop app on app dragged=\(draggedID) target=\(targetID)")
+        createFolder(draggedID: draggedID, targetID: targetID)
+    }
 
-        if appByID(targetID) != nil, appByID(draggedID) != nil {
-            LaunchLog.line("drop app on app dragged=\(draggedID) target=\(targetID)")
-            createFolder(draggedID: draggedID, targetID: targetID)
-        } else if folders.contains(where: { $0.id == targetID }), appByID(draggedID) != nil {
-            LaunchLog.line("drop app on folder dragged=\(draggedID) target=\(targetID)")
-            addApp(draggedID, toFolder: targetID)
-        } else {
-            LaunchLog.line("drop app move dragged=\(draggedID) target=\(targetID)")
-            move(draggedID, before: targetID)
-        }
+    func dropAppOnFolder(_ draggedID: String, folderID: String) {
+        guard canDropApp(onFolder: folderID), draggedID == draggedAppID else { return }
+        LaunchLog.line("drop app on folder dragged=\(draggedID) target=\(folderID)")
+        addApp(draggedID, toFolder: folderID)
     }
 }

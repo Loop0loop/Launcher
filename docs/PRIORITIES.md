@@ -27,6 +27,12 @@ swift run Launch
 - Page navigation works through dots, keyboard/gesture, and mouse drag.
 - Folder create/open/add/remove/dissolve works.
 - Empty launcher space dismisses; app/folder/search clicks do not.
+- Drag state is transient: cancel, failed drop, successful drop, launcher hide,
+  and a fresh non-drag click must restore icon opacity.
+- Drop policy is explicit:
+  - app target creates a folder
+  - folder target adds the app to that folder
+  - root reorder is separate from folder create/add
 
 Required checks:
 
@@ -57,6 +63,9 @@ manual restart when persistence changed
 - Material fallback on older macOS.
 - Text remains readable and fits.
 - Menu/window behavior follows platform expectations.
+- Native-grade gestures should use continuous progress state while tracking and
+  commit/cancel only at the end of the gesture. Threshold-only one-shot intents
+  are acceptable as a fallback, not the final interaction model.
 
 Required checks:
 
@@ -70,6 +79,8 @@ manual visual check
 
 - Internal folder reorder.
 - Drag-out folder removal.
+- Full geometry-driven drag engine for Launchpad-style reorder if SwiftUI
+  `onDrag`/`onDrop` remains too limited.
 - Localization.
 - Logging cleanup.
 - Signing/notarization.
@@ -107,12 +118,17 @@ Official references:
 - Keep lifecycle phase/token behavior stable.
 - Keep grid hit testing aligned with `LaunchpadLayoutMetrics`.
 - Reduce high-volume `LaunchLog.line` calls after input UX settles.
-- Keep folder UX focused: create, add, remove, dissolve, then reorder.
+- Keep folder UX focused: close by dim click, create, add, remove, dissolve.
+- Fix stale drag opacity before adding larger drag features.
+- Keep P1 drag/drop fixes small; do not introduce a new drag engine in the
+  same phase.
 
 ### Next
 
 - Add folder internal reorder.
 - Add drag-out removal.
+- Replace one-shot gesture intents with continuous progress for native-feeling
+  page and launch gestures.
 - Add `Localizable.strings`.
 - Verify app bundle resources after icon/menu icon changes.
 

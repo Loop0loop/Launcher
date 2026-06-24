@@ -1,4 +1,5 @@
 import Foundation
+import LaunchCore
 
 extension AppState {
     func launchSelected() {
@@ -35,6 +36,10 @@ extension AppState {
     }
 
     func dismissFromBackground() {
+        guard Date() >= folderReopenLockedUntil else {
+            LaunchLog.line("background dismiss ignored during folder close cooldown")
+            return
+        }
         handleEscape()
     }
 
@@ -86,7 +91,23 @@ extension AppState {
 
     func closeFolder() {
         LaunchLog.line("closeFolder called wasOpen=\(openFolder != nil)")
+        if openFolder != nil {
+            folderReopenLockedUntil = Date().addingTimeInterval(0.25)
+        }
         openFolder = nil
+    }
+
+    func openFolderFromTap(_ folder: LaunchFolder) {
+        guard Date() >= folderReopenLockedUntil else {
+            LaunchLog.line("folder icon tap ignored during close cooldown id=\(folder.id)")
+            return
+        }
+        guard openFolder == nil else {
+            LaunchLog.line("folder icon tap ignored, folder already open id=\(folder.id)")
+            return
+        }
+        LaunchLog.line("folder icon tap open id=\(folder.id)")
+        openFolder = folder
     }
 
     func selectPage(_ page: Int) {

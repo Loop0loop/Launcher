@@ -2,6 +2,14 @@ import LaunchCore
 import SwiftUI
 import UniformTypeIdentifiers
 
+// Private in-app UTType: external apps can't match it, so .onDrag items stay inside our .onDrop targets.
+extension UTType {
+    static let launchAppInternalID = UTType(
+        exportedAs: "com.launch.app.internal-app-id",
+        conformingTo: .data
+    )
+}
+
 struct LauncherView: View {
     @ObservedObject var state: AppState
 
@@ -48,13 +56,17 @@ struct LauncherView: View {
                 .frame(width: geometry.size.width, height: geometry.size.height)
 
                 if let folder = state.openFolder {
-                    Color.black.opacity(state.appearance.folderDimOpacity)
+                    // Rectangle + highPriorityGesture: Color.onTapGesture delivery is unreliable on borderless macOS windows.
+                    Rectangle()
+                        .fill(.black.opacity(state.appearance.folderDimOpacity))
                         .ignoresSafeArea()
                         .contentShape(Rectangle())
-                        .onTapGesture {
-                            LaunchLog.line("folder dim tapped")
-                            state.closeFolder()
-                        }
+                        .highPriorityGesture(
+                            TapGesture().onEnded {
+                                LaunchLog.line("folder dim tapped")
+                                state.closeFolder()
+                            }
+                        )
                         .zIndex(20)
 
                     FolderOverlay(folder: folder, state: state)
@@ -283,13 +295,14 @@ struct AppIcon: View {
             state.launch(app)
         }
         .onDrag {
-            state.draggedAppID = app.id
+            LaunchLog.line("app icon onDrag fired app=\(app.id)")
+            state.beginDrag(app.id)
             return dockItemProvider(for: app)
         }
         .contextMenu {
             launcherAppContextMenu(app: app, state: state)
         }
-        .onDrop(of: [.plainText, .text], delegate: AppDropDelegate(targetID: app.id, state: state))
+        .onDrop(of: [.launchAppInternalID], delegate: AppDropDelegate(targetID: app.id, state: state))
     }
 }
 
@@ -349,15 +362,9 @@ struct FolderIcon: View {
         .contentShape(Rectangle())
         .overlay(keyboardSelectionBackground(isSelected: state.showsKeyboardSelection(for: folder.id)))
         .onTapGesture {
-            // Pinch/click lingering on the icon while a folder is open silently re-opens it, defeating closeFolder.
-            guard state.openFolder == nil else {
-                LaunchLog.line("folder icon tap ignored, folder already open id=\(folder.id)")
-                return
-            }
-            LaunchLog.line("folder icon tap open id=\(folder.id)")
-            state.openFolder = folder
+            state.openFolderFromTap(folder)
         }
-        .onDrop(of: [.plainText, .text], delegate: FolderDropDelegate(targetID: folder.id, state: state))
+        .onDrop(of: [.launchAppInternalID], delegate: FolderDropDelegate(targetID: folder.id, state: state))
     }
 }
 
@@ -481,7 +488,8 @@ struct FolderOverlayAppIcon: View {
             state.launch(app)
         }
         .onDrag {
-            state.draggedAppID = app.id
+            LaunchLog.line("folder app icon onDrag fired app=\(app.id) folder=\(folderID)")
+            state.beginDrag(app.id)
             return dockItemProvider(for: app)
         }
         .contextMenu {
@@ -491,14 +499,18 @@ struct FolderOverlayAppIcon: View {
                 state.removeApp(app.id, fromFolder: folderID)
             }
         }
-        .onDrop(of: [.plainText, .text], delegate: AppDropDelegate(targetID: app.id, state: state))
+        .onDrop(of: [.launchAppInternalID], delegate: AppDropDelegate(targetID: app.id, state: state))
     }
 }
 
 private func dockItemProvider(for app: LaunchApp) -> NSItemProvider {
     let provider = NSItemProvider()
-    // .ownProcess: .all lets other apps (Dictionary) hijack the drag and starve our onDrop.
-    provider.registerObject(app.id as NSString, visibility: .ownProcess)
-    provider.suggestedName = app.id
+    let appID = app.id
+    // Private UTType + ownProcess: only our .onDrop(of: .launchAppInternalID) matches — no public type advertised.
+    provider.registerDataRepresentation(for: .launchAppInternalID, visibility: .ownProcess) { completion in
+        completion(appID.data(using: .utf8), nil)
+        return nil
+    }
+    provider.suggestedName = appID
     return provider
 }

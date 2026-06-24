@@ -83,6 +83,7 @@ final class AppState: ObservableObject {
     var pageBeforeSearch = 0
     var selectionBeforeSearch: String?
     var pageChangeLockedUntil = Date.distantPast
+    var folderReopenLockedUntil = Date.distantPast
     var actions = LauncherActions()
 
     init() {

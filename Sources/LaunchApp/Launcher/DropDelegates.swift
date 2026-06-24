@@ -5,7 +5,7 @@ struct AppDropDelegate: DropDelegate {
     var state: AppState
 
     func validateDrop(info: DropInfo) -> Bool {
-        state.canDropApp(on: targetID)
+        state.canDropApp(onApp: targetID)
     }
 
     func dropUpdated(info: DropInfo) -> DropProposal? {
@@ -24,8 +24,8 @@ struct AppDropDelegate: DropDelegate {
             return false
         }
         LaunchLog.line("app drop perform dragged=\(dragged) target=\(targetID)")
-        state.dropApp(dragged, on: targetID)
-        state.draggedAppID = nil
+        state.dropAppOnApp(dragged, targetID: targetID)
+        state.finishDrag()
         return true
     }
 }
@@ -35,7 +35,7 @@ struct FolderDropDelegate: DropDelegate {
     var state: AppState
 
     func validateDrop(info: DropInfo) -> Bool {
-        state.canDropApp(on: targetID)
+        state.canDropApp(onFolder: targetID)
     }
 
     func dropUpdated(info: DropInfo) -> DropProposal? {
@@ -54,8 +54,8 @@ struct FolderDropDelegate: DropDelegate {
             return false
         }
         LaunchLog.line("folder drop perform dragged=\(dragged) target=\(targetID)")
-        state.dropApp(dragged, on: targetID)
-        state.draggedAppID = nil
+        state.dropAppOnFolder(dragged, folderID: targetID)
+        state.finishDrag()
         return true
     }
 }

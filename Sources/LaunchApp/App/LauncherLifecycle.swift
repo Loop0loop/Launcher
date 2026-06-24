@@ -46,6 +46,7 @@ final class LauncherLifecycle {
         state.query = ""
         state.openFolder = nil
         state.clearSelection()
+        state.cancelDrag()
 
         state.launcherVisible = true
         state.pageDragOffset = 0
@@ -72,6 +73,7 @@ final class LauncherLifecycle {
         guard phase != .hidden, phase != .hiding, window.isVisible else { return }
         LaunchLog.line("lifecycle hide requested visible=\(state.launcherVisible)")
         mouseMonitor?.setEnabled(false)
+        state.cancelDrag()
 
         let token = UUID()
         transitionToken = token
@@ -92,6 +94,7 @@ final class LauncherLifecycle {
         transitionToken = UUID()
         phase = .hidden
         mouseMonitor?.setEnabled(false)
+        state.cancelDrag()
         setMenuBarHidden(false)
         state.launcherVisible = false
         window.orderOut(nil)
@@ -102,6 +105,7 @@ final class LauncherLifecycle {
         AppSystemAdapter.launch(app)
         if window.isVisible {
             mouseMonitor?.setEnabled(false)
+            state.cancelDrag()
             let token = UUID()
             transitionToken = token
             phase = .hiding
