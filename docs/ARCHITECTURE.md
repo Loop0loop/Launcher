@@ -17,12 +17,15 @@ LaunchCore  pure rules checked by LaunchCheck
 - `LaunchApp` owns AppKit, SwiftUI, persistence, permissions, input, and UI.
 - Pure rules go in `LaunchCore`; UI and system integration stay out of it.
 - No top-level `Adapters` bucket. System-facing code lives in its product domain.
+- Owning-type folders are allowed for large AppKit coordinators. `AppDelegate/`
+  is one such domain; `App/` stays focused on app state, lifecycle, and actions.
 
 Current folders:
 
 ```text
 Sources/Launch/main.swift
 Sources/LaunchApp/App
+Sources/LaunchApp/AppDelegate
 Sources/LaunchApp/Appearance
 Sources/LaunchApp/Catalog
 Sources/LaunchApp/Input
@@ -38,6 +41,19 @@ Sources/LaunchCheck
 Keep source files focused. Production Swift files should stay under 300 lines
 unless they are temporary phase work; split large files by product domain before
 adding new behavior.
+
+Swift module style:
+
+- Do not create barrel/export files. SwiftPM target members see each other's
+  internal declarations directly, so an `index.swift`/export layer adds noise.
+- `main.swift` is reserved for executable entry points only.
+- Each domain folder should have one obvious entry file named after the owning
+  type or screen, such as `AppDelegate.swift`, `LauncherView.swift`,
+  `SettingsView.swift`, or `LayoutStore.swift`.
+- Default domain budget is five Swift files. If a domain needs more, either
+  split a real subdomain or keep the exception explicit with clear entry files.
+- Prefer Swift access control over export modules: keep helpers `private` or
+  file-internal by default, and expose only the types used across domains.
 
 ## Core Model
 

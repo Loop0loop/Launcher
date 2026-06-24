@@ -1,5 +1,18 @@
 import CoreGraphics
+import LaunchCore
 import SwiftUI
+
+enum LauncherItem: Identifiable {
+    case app(LaunchApp)
+    case folder(LaunchFolder, [LaunchApp])
+
+    var id: String {
+        switch self {
+        case .app(let app): app.id
+        case .folder(let folder, _): folder.id
+        }
+    }
+}
 
 struct GridDropResolution {
     let onIconID: String?
@@ -72,4 +85,3 @@ extension AppState {
         return GridDropResolution(onIconID: onIcon ? id : nil, slotID: id)
     }
 }
-

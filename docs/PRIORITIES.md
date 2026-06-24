@@ -106,6 +106,10 @@ Use these when reviewing code:
 - Add one `LaunchCheck` assertion for new pure behavior.
 - Keep production Swift files under 300 lines. When a file grows beyond that,
   split by domain before adding more behavior.
+- Use Swift-style domain entry files, not barrel/export files. `main.swift`
+  belongs only to executable entry points.
+- Keep each domain near five Swift files by default; split a subdomain or
+  document the exception when a UI-heavy domain needs more.
 
 Official references:
 

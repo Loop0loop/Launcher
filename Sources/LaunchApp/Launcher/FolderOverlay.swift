@@ -23,14 +23,16 @@ struct FolderOverlay: View {
 
     @ViewBuilder
     private var folderContent: some View {
-        // launchGlass handles macOS 26 real glass vs material fallback; the chrome
-        // layer adds only the signature edge + shadow (no fill, so no muddy double-layer).
+        // Frosted dark material (NSVisualEffectView .hudWindow/.withinWindow) + crisp edge,
+        // matching the macos-launchy folder card. `.clear` glass read far too transparent.
+        let shape = RoundedRectangle(cornerRadius: LaunchConstants.FolderOverlay.cornerRadius, style: .continuous)
         folderPanel
-            .launchGlass(
-                in: RoundedRectangle(cornerRadius: LaunchConstants.FolderOverlay.cornerRadius, style: .continuous),
-                interactive: false,
-                clear: true
+            .background(
+                VisualEffectView(material: .hudWindow, blendingMode: .withinWindow)
+                    .clipShape(shape)
             )
+            .overlay(shape.strokeBorder(.white.opacity(0.25), lineWidth: 0.75))
+            .clipShape(shape)
             .tahoeFolderPanelChrome()
     }
 
@@ -60,28 +62,67 @@ struct FolderOverlay: View {
 struct FolderTitleField: View {
     @Binding var name: String
     let commit: () -> Void
-    @FocusState private var focused: Bool
 
     var body: some View {
-        TextField("", text: $name)
-            .textFieldStyle(.plain)
-            .font(.system(size: LaunchConstants.FolderOverlay.titleFontSize, weight: .semibold))
-            .multilineTextAlignment(.center)
-            .foregroundStyle(.white.opacity(0.95))
-            .shadow(color: .black.opacity(0.3), radius: 0.5, y: 0.5)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 4)
+        // AppKit-backed: a SwiftUI TextField in a nonactivating NSPanel never gets the field
+        // editor (no keyboard). This field makes the panel key on click, like the search bar.
+        FolderTitleNSField(name: $name, commit: commit)
+            .frame(height: LaunchConstants.FolderOverlay.titleFontSize + 14)
             .frame(maxWidth: LaunchConstants.FolderOverlay.width - 120)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(.white.opacity(focused ? 0.12 : 0))
-            )
-            .focused($focused)
-            .onSubmit { focused = false; commit() }
-            .onChange(of: focused) { _, isFocused in
-                if !isFocused { commit() }
-            }
-            .onDisappear(perform: commit)
+    }
+}
+
+private struct FolderTitleNSField: NSViewRepresentable {
+    @Binding var name: String
+    let commit: () -> Void
+
+    func makeNSView(context: Context) -> NSTextField {
+        let field = FolderTitleNSTextField()
+        field.isBordered = false
+        field.isBezeled = false
+        field.drawsBackground = false
+        field.focusRingType = .none
+        field.alignment = .center
+        field.font = .systemFont(ofSize: LaunchConstants.FolderOverlay.titleFontSize, weight: .semibold)
+        field.textColor = .white
+        field.cell?.usesSingleLineMode = true
+        field.lineBreakMode = .byTruncatingTail
+        field.delegate = context.coordinator
+        field.stringValue = name
+        return field
+    }
+
+    func updateNSView(_ field: NSTextField, context: Context) {
+        // Don't clobber text mid-edit (would jump the cursor).
+        if field.currentEditor() == nil, field.stringValue != name {
+            field.stringValue = name
+        }
+    }
+
+    func makeCoordinator() -> Coordinator { Coordinator(self) }
+
+    final class Coordinator: NSObject, NSTextFieldDelegate {
+        let parent: FolderTitleNSField
+        init(_ parent: FolderTitleNSField) { self.parent = parent }
+
+        func controlTextDidChange(_ notification: Notification) {
+            guard let field = notification.object as? NSTextField else { return }
+            parent.name = field.stringValue
+        }
+
+        func controlTextDidEndEditing(_ notification: Notification) {
+            parent.commit()
+        }
+    }
+}
+
+final class FolderTitleNSTextField: NSTextField {
+    override var acceptsFirstResponder: Bool { true }
+
+    override func mouseDown(with event: NSEvent) {
+        window?.makeKey()
+        window?.makeFirstResponder(self)
+        super.mouseDown(with: event)
     }
 }
 
