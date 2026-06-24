@@ -59,7 +59,9 @@ struct LaunchpadLayoutMetrics {
     }
 
     var columnWidth: CGFloat {
-        gridWidth / CGFloat(columns)
+        let columnCount = max(columns, 1)
+        let totalSpacing = gridColumnSpacing * CGFloat(max(columnCount - 1, 0))
+        return max((gridWidth - totalSpacing) / CGFloat(columnCount), 1)
     }
 
     var rowHeight: CGFloat {

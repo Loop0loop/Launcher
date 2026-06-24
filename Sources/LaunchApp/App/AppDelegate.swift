@@ -27,7 +27,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         LaunchLog.line("app did finish launching")
         NSApp.setActivationPolicy(.accessory)
         makeWindow()
-        makeStatusItem()
+        applyAppIcon()
+        applyMenuBarVisibility()
         state.requestAccessibilityPermission()
         startGlobalHotKey()
         startHotCornerMonitor()
@@ -73,7 +74,9 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             moveToTrash: { [weak self] app in self?.confirmMoveToTrash(app) },
             addToDock: { app in AppSystemAdapter.addToDock(app) },
             chooseAppSource: { [weak self] in self?.chooseAppSource() },
-            applyWindowBrowsingMode: { [weak self] in self?.launcherLifecycle?.applyWindowBrowsingMode() }
+            applyWindowBrowsingMode: { [weak self] in self?.launcherLifecycle?.applyWindowBrowsingMode() },
+            applyMenuBarVisibility: { [weak self] in self?.applyMenuBarVisibility() },
+            applyAppIcon: { [weak self] in self?.applyAppIcon() }
         )
     }
 
@@ -94,6 +97,21 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         button.sendAction(on: [.leftMouseUp])
         startStatusRightClickMonitor(for: button)
         LaunchLog.line("status item ready")
+    }
+
+    func applyMenuBarVisibility() {
+        if state.showMenuBarIcon {
+            if statusItem == nil { makeStatusItem() }
+        } else if let item = statusItem {
+            NSStatusBar.system.removeStatusItem(item)
+            statusItem = nil
+        }
+    }
+
+    func applyAppIcon() {
+        if let image = state.appIcon.image() {
+            NSApp.applicationIconImage = image
+        }
     }
 
     /// Menu bar glyph as a template image so macOS tints it (white on a dark menu bar).

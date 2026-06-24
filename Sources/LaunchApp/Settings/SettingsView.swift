@@ -1,216 +1,316 @@
+import AppKit
 import SwiftUI
 
+/// Tabbed settings panel (General / Interface / Apps / Advanced / About), liquid-glass styled.
+/// Stage 1 wires every control that already has backing in `AppState`; new-backend controls
+/// (menu bar icon, app icon, configurable hotkey, hot corner, trackpad fingers) land in later stages.
 struct SettingsView: View {
     @ObservedObject var state: AppState
+    @State private var tab: SettingsTab = .general
 
     var body: some View {
         ZStack {
             VisualEffectView(material: .hudWindow, blendingMode: .behindWindow)
                 .ignoresSafeArea()
-
             Color.black.opacity(LaunchConstants.Appearance.settingsBackdropOpacity)
                 .ignoresSafeArea()
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: LaunchConstants.Settings.sectionSpacing) {
-                    settingsHeader
+            VStack(spacing: 0) {
+                SettingsTabBar(selection: $tab)
+                    .padding(.top, LaunchConstants.Settings.titleBarInset)
+                    .padding(.horizontal, LaunchConstants.Settings.padding)
+                    .padding(.bottom, 8)
 
-                    appearanceSection
-                    gridLayoutSection
-                    generalSection
-                    appSourcesSection
-                    permissionsSection
-                }
-                .padding(LaunchConstants.Settings.padding)
-                .padding(.top, LaunchConstants.Settings.titleBarInset)
-            }
-        }
-        .frame(width: LaunchConstants.Settings.width, alignment: .top)
-        .frame(minHeight: LaunchConstants.Settings.height)
-    }
+                Divider().opacity(0.12)
 
-    private var settingsHeader: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(LaunchConstants.App.settingsTitle)
-                .font(.system(size: 22, weight: .semibold, design: .rounded))
-                .foregroundStyle(.primary)
-
-            Text("Customize Launch")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-        }
-        .padding(.bottom, 4)
-    }
-
-    private var appearanceSection: some View {
-        SettingsGlassSection(title: LaunchConstants.Settings.appearanceSection) {
-            AppearancePreview(
-                dimOpacity: state.appearance.backgroundDimOpacity,
-                folderDimOpacity: state.appearance.folderDimOpacity
-            )
-
-            SettingsSliderRow(
-                title: LaunchConstants.Settings.backgroundTransparency,
-                help: LaunchConstants.Settings.backgroundTransparencyHelp,
-                value: transparencyBinding,
-                displayValue: "\(Int((state.appearance.backgroundTransparency * 100).rounded()))%"
-            )
-
-            SettingsSliderRow(
-                title: LaunchConstants.Settings.folderDim,
-                help: LaunchConstants.Settings.folderDimHelp,
-                value: folderDimBinding,
-                range: LaunchConstants.Appearance.minFolderDim...LaunchConstants.Appearance.maxFolderDim,
-                displayValue: "\(Int((state.appearance.folderDimOpacity * 100).rounded()))%"
-            )
-        }
-    }
-
-    private var gridLayoutSection: some View {
-        SettingsGlassSection(title: LaunchConstants.Settings.gridLayoutSection) {
-            Picker(LaunchConstants.Settings.gridPreset, selection: $state.gridLayout) {
-                ForEach(GridLayoutSettings.presets) { preset in
-                    Text(preset.label).tag(preset)
-                }
-            }
-            .pickerStyle(.segmented)
-
-            Picker(LaunchConstants.Settings.displayMode, selection: $state.displayMode) {
-                ForEach(LauncherDisplayMode.allCases) { mode in
-                    Text(mode.rawValue).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
-        }
-    }
-
-    private var generalSection: some View {
-        SettingsGlassSection(title: LaunchConstants.Settings.generalSection) {
-            SettingsToggleRow(
-                title: LaunchConstants.Settings.launchAtLogin,
-                isOn: Binding(
-                    get: { state.launchAtLogin },
-                    set: { state.setLaunchAtLogin($0) }
-                )
-            )
-
-            SettingsToggleRow(
-                title: LaunchConstants.Settings.windowBrowsingMode,
-                isOn: $state.windowBrowsingMode
-            )
-
-            SettingsActionRow(title: LaunchConstants.Menu.refreshApps) {
-                state.refreshApps()
-            }
-
-            SettingsActionRow(title: LaunchConstants.Settings.importNativeLayout) {
-                state.importNativeLaunchpadLayout()
-            }
-
-            if let error = state.loginItemError {
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-            }
-        }
-    }
-
-    private var appSourcesSection: some View {
-        SettingsGlassSection(title: LaunchConstants.Settings.appSourcesSection) {
-            if state.appSourcePaths.isEmpty {
-                Text("Default application folders only")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            } else {
-                ForEach(state.appSourcePaths, id: \.self) { path in
-                    HStack(spacing: 10) {
-                        Text(path)
-                            .font(.caption)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
-
-                        Spacer()
-
-                        Button(LaunchConstants.Settings.removeAppSource) {
-                            state.removeAppSource(path)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: LaunchConstants.Settings.sectionSpacing) {
+                        switch tab {
+                        case .general: generalTab
+                        case .interface: interfaceTab
+                        case .apps: appsTab
+                        case .advanced: advancedTab
+                        case .about: aboutTab
                         }
-                        .buttonStyle(.plain)
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.red)
+                    }
+                    .padding(LaunchConstants.Settings.padding)
+                }
+            }
+        }
+        .frame(
+            width: LaunchConstants.Settings.width,
+            height: LaunchConstants.Settings.height,
+            alignment: .top
+        )
+        .foregroundStyle(.white)
+    }
+
+    // MARK: General
+
+    private var generalTab: some View {
+        Group {
+            SettingsSection(title: "Launch") {
+                SettingsToggleRow(
+                    title: LaunchConstants.Settings.launchAtLogin,
+                    isOn: Binding(get: { state.launchAtLogin }, set: { state.setLaunchAtLogin($0) })
+                )
+                if let error = state.loginItemError {
+                    Text(error).font(.caption).foregroundStyle(.red)
+                }
+            }
+
+            SettingsSection(title: LaunchConstants.Settings.appearanceSection) {
+                SettingsToggleRow(title: LaunchConstants.Settings.showMenuBarIcon, isOn: $state.showMenuBarIcon)
+                SettingsRow(title: LaunchConstants.Settings.appIcon) {
+                    AppIconPicker(selection: $state.appIcon)
+                }
+            }
+        }
+    }
+
+    // MARK: Interface
+
+    private var interfaceTab: some View {
+        Group {
+            SettingsSection(title: "Layout") {
+                SettingsRow(title: LaunchConstants.Settings.sortBy) {
+                    Picker("", selection: $state.sortMode) {
+                        ForEach(SortMode.allCases) { Text($0.title).tag($0) }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.menu)
+                    .fixedSize()
+                }
+
+                SettingsRow(title: "Browsing Style") {
+                    Picker("", selection: $state.displayMode) {
+                        ForEach(LauncherDisplayMode.allCases) { mode in
+                            Text(mode.browsingLabel).tag(mode)
+                        }
+                    }
+                    .labelsHidden()
+                    .pickerStyle(.segmented)
+                    .fixedSize()
+                }
+
+                SettingsRow(title: "Icon Grid") {
+                    HStack(spacing: 8) {
+                        Stepper(value: columnsBinding, in: 4...12) {
+                            Text("\(state.gridLayout.columns)").monospacedDigit()
+                        }
+                        .fixedSize()
+                        Text("×").foregroundStyle(.secondary)
+                        Stepper(value: rowsBinding, in: 3...10) {
+                            Text("\(state.gridLayout.rows)").monospacedDigit()
+                        }
+                        .fixedSize()
                     }
                 }
             }
 
-            SettingsActionRow(title: LaunchConstants.Settings.addAppSource) {
-                state.requestAppSource()
+            SettingsSection(title: "Background") {
+                SettingsSliderRow(
+                    title: LaunchConstants.Settings.backgroundTransparency,
+                    help: LaunchConstants.Settings.backgroundTransparencyHelp,
+                    value: bind(\.appearance.backgroundTransparency),
+                    display: percent(state.appearance.backgroundTransparency)
+                )
+                SettingsSliderRow(
+                    title: LaunchConstants.Settings.folderDim,
+                    help: LaunchConstants.Settings.folderDimHelp,
+                    value: bind(\.appearance.folderDimOpacity),
+                    range: LaunchConstants.Appearance.minFolderDim...LaunchConstants.Appearance.maxFolderDim,
+                    display: percent(state.appearance.folderDimOpacity)
+                )
             }
         }
     }
 
-    private var permissionsSection: some View {
-        SettingsGlassSection(title: LaunchConstants.Settings.permissionsSection) {
-            SettingsStatusRow(
-                title: LaunchConstants.Settings.accessibility,
-                status: state.accessibilityState.label,
-                isPositive: state.accessibilityState == .allowed
-            )
+    // MARK: Apps
 
-            SettingsStatusRow(
-                title: LaunchConstants.Settings.trackpad,
-                status: state.trackpadGateState.label,
-                isPositive: state.trackpadGateState == .exactPinch
-            )
+    private var appsTab: some View {
+        Group {
+            SettingsSection(title: "App Sources") {
+                if state.appSourcePaths.isEmpty {
+                    Text("Default application folders only")
+                        .font(.caption).foregroundStyle(.secondary)
+                } else {
+                    ForEach(state.appSourcePaths, id: \.self) { path in
+                        HStack(spacing: 10) {
+                            Text(path).font(.caption).lineLimit(1).truncationMode(.middle)
+                            Spacer()
+                            Button(LaunchConstants.Settings.removeAppSource) { state.removeAppSource(path) }
+                                .buttonStyle(.plain)
+                                .font(.caption.weight(.medium))
+                                .foregroundStyle(.red)
+                        }
+                    }
+                }
+                SettingsActionRow(title: LaunchConstants.Settings.addAppSource) { state.requestAppSource() }
+            }
 
-            SettingsStatusRow(
-                title: LaunchConstants.Settings.globalHotKey,
-                status: state.globalHotKeyState.label,
-                isPositive: state.globalHotKeyState == .allowed
-            )
-
-            SettingsStatusRow(
-                title: LaunchConstants.Settings.f4Key,
-                status: state.f4KeyState.label,
-                isPositive: state.f4KeyState == .allowed
-            )
-
-            SettingsActionRow(title: LaunchConstants.Settings.requestAccessibility) {
-                state.requestAccessibilityPermission()
+            SettingsSection(title: "Catalog") {
+                SettingsActionRow(title: LaunchConstants.Menu.refreshApps) { state.refreshApps() }
+                SettingsActionRow(title: LaunchConstants.Settings.importNativeLayout) { state.importNativeLaunchpadLayout() }
             }
         }
     }
 
-    private var transparencyBinding: Binding<Double> {
-        Binding(
-            get: { state.appearance.backgroundTransparency },
-            set: { state.appearance.backgroundTransparency = $0 }
-        )
+    // MARK: Advanced
+
+    private var advancedTab: some View {
+        Group {
+            SettingsSection(title: "Permissions") {
+                SettingsStatusRow(title: LaunchConstants.Settings.accessibility, status: state.accessibilityState.label, positive: state.accessibilityState == .allowed)
+                SettingsStatusRow(title: LaunchConstants.Settings.trackpad, status: state.trackpadGateState.label, positive: state.trackpadGateState == .exactPinch)
+                SettingsStatusRow(title: LaunchConstants.Settings.globalHotKey, status: state.globalHotKeyState.label, positive: state.globalHotKeyState == .allowed)
+                SettingsStatusRow(title: LaunchConstants.Settings.f4Key, status: state.f4KeyState.label, positive: state.f4KeyState == .allowed)
+                SettingsActionRow(title: LaunchConstants.Settings.requestAccessibility) { state.requestAccessibilityPermission() }
+            }
+
+            SettingsSection(title: "Window") {
+                SettingsToggleRow(title: LaunchConstants.Settings.windowBrowsingMode, isOn: $state.windowBrowsingMode)
+            }
+        }
     }
 
-    private var folderDimBinding: Binding<Double> {
-        Binding(
-            get: { state.appearance.folderDimOpacity },
-            set: { state.appearance.folderDimOpacity = $0 }
-        )
+    // MARK: About
+
+    private var aboutTab: some View {
+        SettingsSection(title: "About") {
+            HStack(spacing: 14) {
+                Image(nsImage: NSApp.applicationIconImage ?? NSImage())
+                    .resizable().frame(width: 64, height: 64)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(LaunchConstants.App.settingsTitle.replacingOccurrences(of: " Settings", with: ""))
+                        .font(.system(size: 20, weight: .semibold, design: .rounded))
+                    Text("Version \(Self.appVersion)").font(.subheadline).foregroundStyle(.secondary)
+                    Text(Self.bundleID).font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+            }
+        }
+    }
+
+    // MARK: Bindings / helpers
+
+    private var columnsBinding: Binding<Int> {
+        Binding(get: { state.gridLayout.columns },
+                set: { state.gridLayout = GridLayoutSettings(columns: $0, rows: state.gridLayout.rows) })
+    }
+    private var rowsBinding: Binding<Int> {
+        Binding(get: { state.gridLayout.rows },
+                set: { state.gridLayout = GridLayoutSettings(columns: state.gridLayout.columns, rows: $0) })
+    }
+    private func bind(_ keyPath: ReferenceWritableKeyPath<AppState, Double>) -> Binding<Double> {
+        Binding(get: { state[keyPath: keyPath] }, set: { state[keyPath: keyPath] = $0 })
+    }
+    private func percent(_ value: Double) -> String { "\(Int((value * 100).rounded()))%" }
+
+    private static var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "—"
+    }
+    private static var bundleID: String { Bundle.main.bundleIdentifier ?? "—" }
+}
+
+// MARK: - Tabs
+
+extension LauncherDisplayMode {
+    /// Video reference labels the vertical mode "Scroll".
+    var browsingLabel: String {
+        switch self {
+        case .paged: "Paged"
+        case .vertical: "Scroll"
+        }
     }
 }
 
-private struct SettingsGlassSection<Content: View>: View {
+enum SettingsTab: String, CaseIterable, Identifiable {
+    case general, interface, apps, advanced, about
+    var id: String { rawValue }
+    var title: String { rawValue.capitalized }
+    var systemImage: String {
+        switch self {
+        case .general: "gearshape"
+        case .interface: "slider.horizontal.3"
+        case .apps: "square.grid.2x2"
+        case .advanced: "wrench.and.screwdriver"
+        case .about: "info.circle"
+        }
+    }
+}
+
+private struct SettingsTabBar: View {
+    @Binding var selection: SettingsTab
+
+    var body: some View {
+        HStack(spacing: 4) {
+            ForEach(SettingsTab.allCases) { tab in
+                let active = tab == selection
+                Button {
+                    withAnimation(.easeOut(duration: 0.15)) { selection = tab }
+                } label: {
+                    VStack(spacing: 4) {
+                        Image(systemName: tab.systemImage).font(.system(size: 15, weight: .medium))
+                        Text(tab.title).font(.system(size: 11, weight: .medium))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 8)
+                    .foregroundStyle(active ? Color.accentColor : .secondary)
+                    .background {
+                        if active {
+                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                .fill(.white.opacity(0.12))
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+}
+
+// MARK: - Building blocks
+
+private struct SettingsSection<Content: View>: View {
     let title: String
     @ViewBuilder let content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(title)
-                .font(.headline)
-                .foregroundStyle(.primary.opacity(0.92))
-
-            VStack(alignment: .leading, spacing: 14) {
-                content
-            }
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title.uppercased())
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .tracking(0.6)
+            VStack(alignment: .leading, spacing: 14) { content }
+                .padding(16)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .settingsGlassCard()
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .settingsGlassCard()
+    }
+}
+
+/// Label on the left, trailing control on the right.
+private struct SettingsRow<Trailing: View>: View {
+    let title: String
+    @ViewBuilder let trailing: Trailing
+
+    var body: some View {
+        HStack {
+            Text(title).font(.subheadline)
+            Spacer(minLength: 12)
+            trailing
+        }
+    }
+}
+
+private struct SettingsToggleRow: View {
+    let title: String
+    @Binding var isOn: Bool
+    var body: some View {
+        SettingsRow(title: title) {
+            Toggle("", isOn: $isOn).labelsHidden().toggleStyle(.switch)
+        }
     }
 }
 
@@ -219,56 +319,17 @@ private struct SettingsSliderRow: View {
     let help: String
     @Binding var value: Double
     var range: ClosedRange<Double> = 0...1
-    let displayValue: String
+    let display: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
-                Text(title)
-                    .font(.subheadline.weight(.medium))
+                Text(title).font(.subheadline.weight(.medium))
                 Spacer()
-                Text(displayValue)
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.secondary)
+                Text(display).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
             }
-
             Slider(value: $value, in: range)
-
-            Text(help)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-    }
-}
-
-private struct SettingsToggleRow: View {
-    let title: String
-    @Binding var isOn: Bool
-
-    var body: some View {
-        Toggle(title, isOn: $isOn)
-            .toggleStyle(.switch)
-    }
-}
-
-private struct SettingsStatusRow: View {
-    let title: String
-    let status: String
-    let isPositive: Bool
-
-    var body: some View {
-        HStack {
-            Text(title)
-            Spacer()
-            Text(status)
-                .font(.caption.weight(.medium))
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(
-                    Capsule()
-                        .fill((isPositive ? Color.green : Color.orange).opacity(0.18))
-                )
-                .foregroundStyle(isPositive ? .green : .orange)
+            Text(help).font(.caption).foregroundStyle(.secondary)
         }
     }
 }
@@ -276,7 +337,6 @@ private struct SettingsStatusRow: View {
 private struct SettingsActionRow: View {
     let title: String
     let action: () -> Void
-
     var body: some View {
         Button(title, action: action)
             .buttonStyle(.plain)
@@ -286,45 +346,42 @@ private struct SettingsActionRow: View {
     }
 }
 
-private struct AppearancePreview: View {
-    let dimOpacity: Double
-    let folderDimOpacity: Double
+private struct AppIconPicker: View {
+    @Binding var selection: AppIconOption
 
     var body: some View {
-        HStack(spacing: 12) {
-            previewTile(label: "Launcher", dimOpacity: dimOpacity)
-            previewTile(label: "Folder", dimOpacity: folderDimOpacity)
+        HStack(spacing: 10) {
+            ForEach(AppIconOption.allCases) { option in
+                Button {
+                    selection = option
+                } label: {
+                    Image(nsImage: option.image() ?? NSImage())
+                        .resizable()
+                        .frame(width: 36, height: 36)
+                        .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .strokeBorder(Color.accentColor, lineWidth: selection == option ? 2.5 : 0)
+                        }
+                }
+                .buttonStyle(.plain)
+                .help(option.title)
+            }
         }
     }
+}
 
-    private func previewTile(label: String, dimOpacity: Double) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(
-                        LinearGradient(
-                            colors: [.blue.opacity(0.55), .purple.opacity(0.45)],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-
-                VisualEffectView(material: .fullScreenUI, blendingMode: .withinWindow)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(.black.opacity(dimOpacity))
-            }
-            .frame(height: 52)
-            .overlay {
-                RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(.white.opacity(0.18), lineWidth: 1)
-            }
-
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+private struct SettingsStatusRow: View {
+    let title: String
+    let status: String
+    let positive: Bool
+    var body: some View {
+        SettingsRow(title: title) {
+            Text(status)
+                .font(.caption.weight(.medium))
+                .padding(.horizontal, 8).padding(.vertical, 4)
+                .background(Capsule().fill((positive ? Color.green : Color.orange).opacity(0.18)))
+                .foregroundStyle(positive ? .green : .orange)
         }
-        .frame(maxWidth: .infinity)
     }
 }

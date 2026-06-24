@@ -29,6 +29,15 @@ struct LauncherView: View {
                     windowed: state.windowBrowsingMode
                 )
 
+                // Empty-space dismissal owned by SwiftUI: taps that fall through the
+                // icon buttons (gaps, margins) reach this layer and dismiss the launcher.
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        LaunchLog.line("background tap dismiss")
+                        state.dismissFromBackground()
+                    }
+
                 launcherContent(
                     layout: layout,
                     columns: columns,
@@ -41,7 +50,11 @@ struct LauncherView: View {
                 if let folder = state.openFolder {
                     Color.black.opacity(state.appearance.folderDimOpacity)
                         .ignoresSafeArea()
-                        .onTapGesture { state.closeFolder() }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            LaunchLog.line("folder dim tapped")
+                            state.closeFolder()
+                        }
                         .zIndex(20)
 
                     FolderOverlay(folder: folder, state: state)
@@ -102,14 +115,31 @@ struct LauncherView: View {
     @ViewBuilder
     private func searchResultsGrid(layout: LaunchpadLayoutMetrics, columns: [GridItem]) -> some View {
         ScrollView {
-            LazyVGrid(columns: columns, spacing: layout.gridRowSpacing) {
-                ForEach(state.visibleItems) { item in
-                    LauncherItemView(item: item, state: state, layout: layout)
+            ZStack(alignment: .top) {
+                LauncherDismissLayer {
+                    LaunchLog.line("search empty tap dismiss")
+                    state.dismissFromBackground()
                 }
+
+                LazyVGrid(columns: columns, spacing: layout.gridRowSpacing) {
+                    ForEach(state.visibleItems) { item in
+                        LauncherItemView(item: item, state: state, layout: layout)
+                    }
+                }
+                .padding(.horizontal, layout.horizontalPadding)
             }
-            .padding(.horizontal, layout.horizontalPadding)
             .frame(minHeight: layout.gridHeight(showsPageControl: false), alignment: .top)
         }
+    }
+}
+
+private struct LauncherDismissLayer: View {
+    let action: () -> Void
+
+    var body: some View {
+        Color.clear
+            .contentShape(Rectangle())
+            .onTapGesture(perform: action)
     }
 }
 
@@ -123,10 +153,18 @@ struct PagedGridView: View {
     var body: some View {
         HStack(spacing: 0) {
             ForEach(0..<state.pageCount, id: \.self) { page in
-                LazyVGrid(columns: columns, spacing: layout.gridRowSpacing) {
-                    ForEach(state.items(forPage: page)) { item in
-                        LauncherItemView(item: item, state: state, layout: layout)
+                ZStack(alignment: .top) {
+                    LauncherDismissLayer {
+                        LaunchLog.line("page empty tap dismiss page=\(page)")
+                        state.dismissFromBackground()
                     }
+
+                    LazyVGrid(columns: columns, spacing: layout.gridRowSpacing) {
+                        ForEach(state.items(forPage: page)) { item in
+                            LauncherItemView(item: item, state: state, layout: layout)
+                        }
+                    }
+                    .padding(.horizontal, layout.horizontalPadding)
                 }
                 .frame(width: pageWidth, height: gridHeight, alignment: .top)
             }
@@ -386,6 +424,10 @@ struct FolderOverlay: View {
         }
         .padding(LaunchConstants.FolderOverlay.padding)
         .frame(width: LaunchConstants.FolderOverlay.width)
+        .contentShape(
+            RoundedRectangle(cornerRadius: LaunchConstants.FolderOverlay.cornerRadius, style: .continuous)
+        )
+        .onTapGesture {}
     }
 }
 

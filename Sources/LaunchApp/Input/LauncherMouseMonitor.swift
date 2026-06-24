@@ -135,11 +135,8 @@ final class LauncherMouseMonitor {
             return event
         }
 
-        if isBackgroundClick(event) {
-            LaunchLog.line("mouse background click")
-            state.dismissFromBackground()
-        }
-
+        // Dismissal (empty space / folder close) is owned by SwiftUI tap layers; the
+        // monitor only handles search focus and page dragging.
         return event
     }
 
@@ -174,15 +171,6 @@ final class LauncherMouseMonitor {
         return NSRect(x: x, y: y, width: width, height: height)
     }
 
-    private func isBackgroundClick(_ event: NSEvent) -> Bool {
-        if hitsSearchBar(event) { return false }
-        if hitsLauncherItem(event) { return false }
-        guard let window, let contentView = window.contentView else { return false }
-        let point = contentView.convert(event.locationInWindow, from: nil)
-        guard let hit = contentView.hitTest(point) else { return true }
-        return !isInteractiveView(hit)
-    }
-
     private func hitsLauncherItem(_ event: NSEvent) -> Bool {
         guard let window, let contentView = window.contentView, let state else { return false }
         guard state.openFolder == nil, state.query.isEmpty else { return false }
@@ -198,14 +186,20 @@ final class LauncherMouseMonitor {
         )
         let showsPageControl = state.pageCount > 1
         let gridHeight = layout.gridHeight(showsPageControl: showsPageControl)
-        let yFromTop = size.height - point.y
+        // contentView (LauncherPresentationContainer) is flipped, so point.y is already
+        // measured from the top — matching the top-down layout metrics below.
+        let yFromTop = point.y
         let gridTop = layout.topChromeHeight
         guard yFromTop >= gridTop, yFromTop <= gridTop + gridHeight else { return false }
 
         let xInGrid = point.x - layout.horizontalPadding
         guard xInGrid >= 0, xInGrid <= layout.gridWidth else { return false }
 
-        let column = Int(xInGrid / max(layout.columnWidth, 1))
+        let columnSlotWidth = layout.columnWidth + layout.gridColumnSpacing
+        let column = Int(xInGrid / max(columnSlotWidth, 1))
+        let columnStart = CGFloat(column) * columnSlotWidth
+        guard xInGrid >= columnStart, xInGrid <= columnStart + layout.columnWidth else { return false }
+
         let row = Int(((yFromTop - gridTop) / max(gridHeight, 1)) * CGFloat(layout.rows))
         guard column >= 0, column < layout.columns, row >= 0, row < layout.rows else { return false }
 
@@ -215,17 +209,5 @@ final class LauncherMouseMonitor {
             LaunchLog.line("mouse item click page=\(state.currentPage) index=\(index)")
         }
         return hit
-    }
-
-    private func isInteractiveView(_ view: NSView) -> Bool {
-        var current: NSView? = view
-        while let view = current {
-            if view is LauncherSearchBarView { return true }
-            if view is NSControl { return true }
-            if view is NSTextView { return true }
-            if view is NSScrollView { return true }
-            current = view.superview
-        }
-        return false
     }
 }

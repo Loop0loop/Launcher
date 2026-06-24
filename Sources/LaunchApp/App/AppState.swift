@@ -56,6 +56,27 @@ final class AppState: ObservableObject {
             AppearanceStore.save(appearance)
         }
     }
+    @Published var showMenuBarIcon = (UserDefaults.standard.object(forKey: LaunchConstants.Storage.showMenuBarIconKey) as? Bool) ?? true {
+        didSet {
+            guard oldValue != showMenuBarIcon else { return }
+            UserDefaults.standard.set(showMenuBarIcon, forKey: LaunchConstants.Storage.showMenuBarIconKey)
+            actions.applyMenuBarVisibility()
+        }
+    }
+    @Published var appIcon = AppIconOption.load() {
+        didSet {
+            guard oldValue != appIcon else { return }
+            appIcon.save()
+            actions.applyAppIcon()
+        }
+    }
+    @Published var sortMode = SortMode.load() {
+        didSet {
+            guard oldValue != sortMode else { return }
+            sortMode.save()
+            if sortMode == .name { applyNameSort() }
+        }
+    }
     @Published var order: [String] = []
 
     let layoutStore = LayoutStore()

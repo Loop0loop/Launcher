@@ -60,9 +60,12 @@ enum LaunchConstants {
         static let importNativeLayout = "Import Native Launchpad Layout"
         static let displayMode = "Display Mode"
         static let windowBrowsingMode = "Window Browsing Mode"
+        static let showMenuBarIcon = "Show Menu Bar Icon"
+        static let appIcon = "App Icon"
+        static let sortBy = "Sort By"
 
-        static let width: CGFloat = 420
-        static let height: CGFloat = 560
+        static let width: CGFloat = 500
+        static let height: CGFloat = 620
         static let padding: CGFloat = 24
         static let sectionSpacing: CGFloat = 18
         static let cardCornerRadius: CGFloat = 16
@@ -86,6 +89,9 @@ enum LaunchConstants {
         static let hiddenAppsKey = "hiddenApps"
         static let displayModeKey = "displayMode"
         static let windowBrowsingModeKey = "windowBrowsingMode"
+        static let showMenuBarIconKey = "showMenuBarIcon"
+        static let appIconKey = "appIcon"
+        static let sortModeKey = "sortMode"
     }
 
     enum Launcher {

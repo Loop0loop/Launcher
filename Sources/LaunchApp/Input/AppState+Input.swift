@@ -24,6 +24,7 @@ extension AppState {
     }
 
     func handleEscape() {
+        LaunchLog.line("handleEscape openFolder=\(openFolder?.id ?? "nil") query=\(query.isEmpty ? "empty" : query)")
         if openFolder != nil {
             closeFolder()
         } else if !query.isEmpty {
@@ -84,6 +85,7 @@ extension AppState {
     }
 
     func closeFolder() {
+        LaunchLog.line("closeFolder called wasOpen=\(openFolder != nil)")
         openFolder = nil
     }
 

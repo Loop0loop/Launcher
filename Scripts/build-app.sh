@@ -9,6 +9,8 @@ mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp Resources/Info.plist "$app/Contents/Info.plist"
 cp Resources/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
 cp Resources/MenuBarIcon.png "$app/Contents/Resources/MenuBarIcon.png"
+cp Resources/AppIconColor.png "$app/Contents/Resources/AppIconColor.png"
+cp Resources/AppIconMono.png "$app/Contents/Resources/AppIconMono.png"
 cp .build/debug/Launch "$app/Contents/MacOS/Launch"
 chmod +x "$app/Contents/MacOS/Launch"
 

@@ -10,4 +10,6 @@ struct LauncherActions {
     var addToDock: (LaunchApp) -> Void = { _ in }
     var chooseAppSource: () -> Void = {}
     var applyWindowBrowsingMode: () -> Void = {}
+    var applyMenuBarVisibility: () -> Void = {}
+    var applyAppIcon: () -> Void = {}
 }

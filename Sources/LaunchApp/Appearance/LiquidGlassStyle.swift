@@ -36,23 +36,24 @@ extension View {
     }
 
 
-    /// Tahoe-style folder tile: light frosted glass square.
+    /// Tahoe-style folder tile: translucent dark Liquid Glass square (not opaque white).
     func launchpadFolderChrome(cornerRadius: CGFloat) -> some View {
         background {
-            RoundedRectangle(cornerRadius: cornerRadius)
-                .fill(.white.opacity(0.16))
-                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: cornerRadius))
+            let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+            shape
+                .fill(.ultraThinMaterial)
+                .overlay { shape.fill(.black.opacity(0.22)) }
                 .overlay {
-                    RoundedRectangle(cornerRadius: cornerRadius)
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [.white.opacity(0.38), .white.opacity(0.1)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            ),
-                            lineWidth: 0.5
-                        )
+                    shape.strokeBorder(
+                        LinearGradient(
+                            colors: [.white.opacity(0.22), .white.opacity(0.05)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        ),
+                        lineWidth: 0.5
+                    )
                 }
+                .clipShape(shape)
         }
     }
 
