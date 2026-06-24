@@ -26,6 +26,10 @@ extension AppState {
 
     func handleEscape() {
         LaunchLog.line("handleEscape openFolder=\(openFolder?.id ?? "nil") query=\(query.isEmpty ? "empty" : query)")
+        guard launcherVisible else {
+            LaunchLog.line("handleEscape ignored launcher not visible")
+            return
+        }
         if openFolder != nil {
             closeFolder()
         } else if !query.isEmpty {
@@ -36,6 +40,18 @@ extension AppState {
     }
 
     func dismissFromBackground() {
+        guard actions.canHandleUserDismissal() else {
+            LaunchLog.line("background dismiss ignored during transition")
+            return
+        }
+        guard launcherVisible else {
+            LaunchLog.line("background dismiss ignored launcher not visible")
+            return
+        }
+        guard !isDraggingLauncherItem else {
+            LaunchLog.line("background dismiss ignored during drag")
+            return
+        }
         guard Date() >= folderReopenLockedUntil else {
             LaunchLog.line("background dismiss ignored during folder close cooldown")
             return
@@ -121,6 +137,10 @@ extension AppState {
     }
 
     func goToPage(_ page: Int) {
+        guard !isDraggingLauncherItem else {
+            LaunchLog.line("go page blocked drag")
+            return
+        }
         guard Date() >= pageChangeLockedUntil else { return }
         let oldPage = currentPage
         selectPage(page)
@@ -131,6 +151,10 @@ extension AppState {
 
     func changePage(_ delta: Int) {
         guard delta != 0 else { return }
+        guard !isDraggingLauncherItem else {
+            LaunchLog.line("change page blocked drag")
+            return
+        }
         guard query.isEmpty else {
             LaunchLog.line("change page blocked query=\(query)")
             return

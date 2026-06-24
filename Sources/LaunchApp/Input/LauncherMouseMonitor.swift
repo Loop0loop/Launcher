@@ -1,6 +1,9 @@
 import AppKit
-import LaunchCore
 
+/// Empty-space page swiping only. Icon dragging is owned by SwiftUI `DragGesture`
+/// (see GridDragController); dismissal and folder close are owned by SwiftUI tap layers.
+/// When an icon drag is active (`isDraggingLauncherItem`) paging backs off so the grid
+/// doesn't shift under the dragged tile.
 @MainActor
 final class LauncherMouseMonitor {
     private weak var window: NSWindow?
@@ -8,16 +11,15 @@ final class LauncherMouseMonitor {
     private var monitor: Any?
     private var isEnabled = false
 
+    private var tracking = false
     private var dragOffset: CGFloat = 0
     private var dragStartPage = 0
     private var pageLockedUntil = Date.distantPast
-    private var mouseDownStartedOnItem = false
 
     func configure(window: NSWindow, state: AppState) {
         self.window = window
         self.state = state
         guard monitor == nil else { return }
-
         monitor = NSEvent.addLocalMonitorForEvents(matching: [.leftMouseDown, .leftMouseDragged, .leftMouseUp]) { [weak self] event in
             guard let self else { return event }
             return self.handle(event)
@@ -26,11 +28,7 @@ final class LauncherMouseMonitor {
 
     func setEnabled(_ enabled: Bool) {
         isEnabled = enabled
-        if !enabled {
-            dragOffset = 0
-            state?.pageDragOffset = 0
-            state?.cancelDrag()
-        }
+        if !enabled { reset() }
     }
 
     func stop() {
@@ -41,182 +39,70 @@ final class LauncherMouseMonitor {
         }
     }
 
+    private func reset() {
+        tracking = false
+        dragOffset = 0
+        state?.pageDragOffset = 0
+    }
+
     private func handle(_ event: NSEvent) -> NSEvent? {
         guard isEnabled, let window, let state else { return event }
-        guard state.launcherVisible, window.isVisible else { return event }
-        guard event.window === window else { return event }
-
+        guard state.launcherVisible, window.isVisible, event.window === window else { return event }
         switch event.type {
-        case .leftMouseDown:
-            return handleMouseDown(event, state: state)
-        case .leftMouseDragged:
-            return handleMouseDragged(event, state: state)
-        case .leftMouseUp:
-            return handleMouseUp(event, state: state)
-        default:
-            return event
+        case .leftMouseDown: return down(event, state)
+        case .leftMouseDragged: return dragged(event, state)
+        case .leftMouseUp: return up(event, state)
+        default: return event
         }
     }
 
-    private func handleMouseDown(_ event: NSEvent, state: AppState) -> NSEvent? {
-        // Clear stale drag state from a previous gesture whose drop never fired; .onDrag re-sets it if a real drag starts.
-        state.cancelDrag()
-        LaunchLog.line("mouse down x=\(event.locationInWindow.x) y=\(event.locationInWindow.y) folderOpen=\(state.openFolder?.id ?? "nil") query=\(state.query.isEmpty ? "empty" : "set")")
-
-        if hitsSearchBar(event) {
-            LaunchLog.line("mouse search click down")
-            state.focusSearchField()
+    private func down(_ event: NSEvent, _ state: AppState) -> NSEvent? {
+        guard state.openFolder == nil, state.query.isEmpty, state.displayMode == .paged, Date() >= pageLockedUntil else {
+            tracking = false
             return event
         }
-
-        mouseDownStartedOnItem = hitsLauncherItem(event)
-        if mouseDownStartedOnItem {
-            return event
-        }
-
-        guard state.openFolder == nil, state.query.isEmpty else { return event }
-        guard Date() >= pageLockedUntil else { return event }
-
+        tracking = true
         dragOffset = 0
         dragStartPage = state.currentPage
         state.pageDragOffset = 0
         return event
     }
 
-    private func handleMouseDragged(_ event: NSEvent, state: AppState) -> NSEvent? {
-        // Item presses are .onDrag — accumulating pageDragOffset here re-renders the grid mid-drag and cancels folder drops.
-        if mouseDownStartedOnItem { return event }
-
-        guard state.openFolder == nil, state.query.isEmpty, state.displayMode == .paged else { return event }
-        guard Date() >= pageLockedUntil else { return event }
-
+    private func dragged(_ event: NSEvent, _ state: AppState) -> NSEvent? {
+        guard tracking else { return event }
+        // A SwiftUI icon drag has taken over — stop paging so the grid doesn't shift.
+        if state.isDraggingLauncherItem {
+            reset()
+            return event
+        }
         dragOffset += event.deltaX
         let pageWidth = window?.frame.width ?? 0
         guard pageWidth > 0 else { return event }
 
         let maxRubber = pageWidth * LaunchConstants.Launcher.pageRubberBandRatio
-        if dragStartPage == 0, dragOffset > 0 {
-            dragOffset = min(dragOffset, maxRubber)
-        }
-        if dragStartPage == state.pageCount - 1, dragOffset < 0 {
-            dragOffset = max(dragOffset, -maxRubber)
-        }
-
+        if dragStartPage == 0, dragOffset > 0 { dragOffset = min(dragOffset, maxRubber) }
+        if dragStartPage == state.pageCount - 1, dragOffset < 0 { dragOffset = max(dragOffset, -maxRubber) }
         state.pageDragOffset = dragOffset
         return event
     }
 
-    private func handleMouseUp(_ event: NSEvent, state: AppState) -> NSEvent? {
-        defer {
-            dragOffset = 0
-            state.pageDragOffset = 0
-            state.cancelDrag()
-            mouseDownStartedOnItem = false
-        }
-
-        if hitsSearchBar(event) {
-            LaunchLog.line("mouse search click up")
-            state.focusSearchField()
-            return event
-        }
-
-        if mouseDownStartedOnItem {
-            return event
-        }
-
+    private func up(_ event: NSEvent, _ state: AppState) -> NSEvent? {
+        defer { reset() }
+        guard tracking, !state.isDraggingLauncherItem else { return event }
         let pageWidth = window?.frame.width ?? 0
-        let dragged = abs(dragOffset) >= LaunchConstants.Launcher.dragMinimumDistance
+        guard abs(dragOffset) >= LaunchConstants.Launcher.dragMinimumDistance, pageWidth > 0 else { return event }
 
-        if dragged, state.openFolder == nil, state.query.isEmpty, state.displayMode == .paged, pageWidth > 0 {
-            let threshold = max(pageWidth * LaunchConstants.Launcher.pageSwipeThresholdRatio, LaunchConstants.Launcher.pageDragThreshold)
-            var target = dragStartPage
-
-            if dragOffset < -threshold {
-                target = min(dragStartPage + 1, state.pageCount - 1)
-            } else if dragOffset > threshold {
-                target = max(dragStartPage - 1, 0)
-            }
-
-            if target != dragStartPage {
-                state.selectPage(target)
-                pageLockedUntil = Date().addingTimeInterval(LaunchConstants.Launcher.pageChangeCooldown)
-            }
-            return event
+        let threshold = max(pageWidth * LaunchConstants.Launcher.pageSwipeThresholdRatio, LaunchConstants.Launcher.pageDragThreshold)
+        var target = dragStartPage
+        if dragOffset < -threshold {
+            target = min(dragStartPage + 1, state.pageCount - 1)
+        } else if dragOffset > threshold {
+            target = max(dragStartPage - 1, 0)
         }
-
-        // Dismissal (empty space / folder close) is owned by SwiftUI tap layers; the
-        // monitor only handles search focus and page dragging.
+        if target != dragStartPage {
+            state.selectPage(target)
+            pageLockedUntil = Date().addingTimeInterval(LaunchConstants.Launcher.pageChangeCooldown)
+        }
         return event
-    }
-
-    private func hitsSearchBar(_ event: NSEvent) -> Bool {
-        guard let window, let contentView = window.contentView else { return false }
-        let point = contentView.convert(event.locationInWindow, from: nil)
-
-        if let bar = state?.searchFocus.barView {
-            let local = bar.convert(point, from: contentView)
-            if bar.bounds.contains(local) {
-                return true
-            }
-        }
-
-        return searchBarLayoutRect(in: contentView)?.contains(point) == true
-    }
-
-    private func searchBarLayoutRect(in contentView: NSView) -> NSRect? {
-        guard let state else { return nil }
-        let size = contentView.bounds.size
-        guard size.width > 0, size.height > 0 else { return nil }
-
-        let layout = LaunchpadLayoutMetrics(
-            size: size,
-            columns: state.gridLayout.columns,
-            rows: state.gridLayout.rows
-        )
-        let width = LaunchConstants.Launcher.searchWidth + 24
-        let height = layout.searchBarHeight + 16
-        let x = (size.width - width) / 2
-        let y = layout.safeTopInset - 8
-        return NSRect(x: x, y: y, width: width, height: height)
-    }
-
-    private func hitsLauncherItem(_ event: NSEvent) -> Bool {
-        guard let window, let contentView = window.contentView, let state else { return false }
-        guard state.openFolder == nil, state.query.isEmpty else { return false }
-
-        let point = contentView.convert(event.locationInWindow, from: nil)
-        let size = contentView.bounds.size
-        guard size.width > 0, size.height > 0 else { return false }
-
-        let layout = LaunchpadLayoutMetrics(
-            size: size,
-            columns: state.gridLayout.columns,
-            rows: state.gridLayout.rows
-        )
-        let showsPageControl = state.pageCount > 1
-        let gridHeight = layout.gridHeight(showsPageControl: showsPageControl)
-        // contentView (LauncherPresentationContainer) is flipped, so point.y is already
-        // measured from the top — matching the top-down layout metrics below.
-        let yFromTop = point.y
-        let gridTop = layout.topChromeHeight
-        guard yFromTop >= gridTop, yFromTop <= gridTop + gridHeight else { return false }
-
-        let xInGrid = point.x - layout.horizontalPadding
-        guard xInGrid >= 0, xInGrid <= layout.gridWidth else { return false }
-
-        let columnSlotWidth = layout.columnWidth + layout.gridColumnSpacing
-        let column = Int(xInGrid / max(columnSlotWidth, 1))
-        let columnStart = CGFloat(column) * columnSlotWidth
-        guard xInGrid >= columnStart, xInGrid <= columnStart + layout.columnWidth else { return false }
-
-        let row = Int(((yFromTop - gridTop) / max(gridHeight, 1)) * CGFloat(layout.rows))
-        guard column >= 0, column < layout.columns, row >= 0, row < layout.rows else { return false }
-
-        let index = row * layout.columns + column
-        let hit = index < state.items(forPage: state.currentPage).count
-        if hit {
-            LaunchLog.line("mouse item click page=\(state.currentPage) index=\(index)")
-        }
-        return hit
     }
 }

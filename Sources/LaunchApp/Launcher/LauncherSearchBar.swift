@@ -151,6 +151,12 @@ struct LauncherSearchBarRepresentable: NSViewRepresentable {
         onBarReady(bar)
     }
 
+    /// Pin the field to a fixed size so SwiftUI doesn't stretch the NSView to the full
+    /// container width (the bar was filling the row without this).
+    func sizeThatFits(_ proposal: ProposedViewSize, nsView: LauncherSearchBarView, context: Context) -> CGSize? {
+        CGSize(width: LaunchConstants.Launcher.searchWidth, height: LaunchConstants.Launcher.searchHeight)
+    }
+
     func makeCoordinator() -> Coordinator {
         Coordinator(text: $text)
     }
@@ -173,19 +179,8 @@ final class LauncherSearchNSTextField: NSTextField {
     override var acceptsFirstResponder: Bool { true }
 
     override func mouseDown(with event: NSEvent) {
-        (window as? LauncherWindow)?.allowsKeyboardFocus = true
         window?.makeKey()
         window?.makeFirstResponder(self)
         super.mouseDown(with: event)
-    }
-
-    override func resignFirstResponder() -> Bool {
-        let resigned = super.resignFirstResponder()
-        // Editing ended — drop key focus so the launcher stops holding the keyboard.
-        if resigned, let window = window as? LauncherWindow {
-            window.allowsKeyboardFocus = false
-            window.resignKey()
-        }
-        return resigned
     }
 }

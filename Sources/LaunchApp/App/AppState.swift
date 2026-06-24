@@ -14,7 +14,9 @@ final class AppState: ObservableObject {
     @Published var currentPage = 0
     @Published var selectedItemID: String?
     @Published var keyboardSelectionActive = false
-    @Published var draggedAppID: String?
+    @Published var draggingItemID: String?
+    @Published var dragHoverTargetID: String?
+    @Published var dragTranslation: CGSize = .zero
     @Published var openFolder: LaunchFolder?
     @Published var launchAtLogin = false
     @Published var loginItemError: String?

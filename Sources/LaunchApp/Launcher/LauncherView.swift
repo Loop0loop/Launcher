@@ -1,14 +1,5 @@
 import LaunchCore
 import SwiftUI
-import UniformTypeIdentifiers
-
-// Private in-app UTType: external apps can't match it, so .onDrag items stay inside our .onDrop targets.
-extension UTType {
-    static let launchAppInternalID = UTType(
-        exportedAs: "com.launch.app.internal-app-id",
-        conformingTo: .data
-    )
-}
 
 struct LauncherView: View {
     @ObservedObject var state: AppState
@@ -109,6 +100,7 @@ struct LauncherView: View {
                 }
             }
             .frame(height: gridHeight)
+            .coordinateSpace(name: "launcherGrid")
 
             if showsPageControl {
                 Spacer(minLength: layout.gridToPagerGap)
@@ -287,22 +279,17 @@ struct AppIcon: View {
                 .frame(width: layout.labelWidth, height: LaunchConstants.Icon.labelHeight, alignment: .top)
                 .launchLabelStyle()
         }
-        .frame(width: layout.columnWidth)
+        .frame(width: max(layout.iconSize, layout.labelWidth))
         .contentShape(Rectangle())
-        .opacity(state.draggedAppID == app.id ? LaunchConstants.Icon.draggedOpacity : 1)
+        .frame(width: layout.columnWidth)
         .overlay(keyboardSelectionBackground(isSelected: state.showsKeyboardSelection(for: app.id)))
         .onTapGesture {
             state.launch(app)
         }
-        .onDrag {
-            LaunchLog.line("app icon onDrag fired app=\(app.id)")
-            state.beginDrag(app.id)
-            return dockItemProvider(for: app)
-        }
+        .launcherDrag(id: app.id, state: state, layout: layout)
         .contextMenu {
             launcherAppContextMenu(app: app, state: state)
         }
-        .onDrop(of: [.launchAppInternalID], delegate: AppDropDelegate(targetID: app.id, state: state))
     }
 }
 
@@ -358,13 +345,14 @@ struct FolderIcon: View {
                 .frame(width: layout.labelWidth, height: LaunchConstants.Icon.labelHeight, alignment: .top)
                 .launchLabelStyle()
         }
-        .frame(width: layout.columnWidth)
+        .frame(width: max(layout.iconSize, layout.labelWidth))
         .contentShape(Rectangle())
+        .frame(width: layout.columnWidth)
         .overlay(keyboardSelectionBackground(isSelected: state.showsKeyboardSelection(for: folder.id)))
         .onTapGesture {
             state.openFolderFromTap(folder)
         }
-        .onDrop(of: [.launchAppInternalID], delegate: FolderDropDelegate(targetID: folder.id, state: state))
+        .launcherDrag(id: folder.id, state: state, layout: layout)
     }
 }
 
@@ -405,17 +393,15 @@ struct FolderOverlay: View {
 
     @ViewBuilder
     private var folderContent: some View {
-        if #available(macOS 26, *) {
-            folderPanel
-                .launchGlass(
-                    in: RoundedRectangle(cornerRadius: LaunchConstants.FolderOverlay.cornerRadius, style: .continuous),
-                    interactive: false
-                )
-                .tahoeFolderPanelChrome(usesMaterial: false)
-        } else {
-            folderPanel
-                .tahoeFolderPanelChrome()
-        }
+        // launchGlass handles macOS 26 real glass vs material fallback; the chrome
+        // layer adds only the signature edge + shadow (no fill, so no muddy double-layer).
+        folderPanel
+            .launchGlass(
+                in: RoundedRectangle(cornerRadius: LaunchConstants.FolderOverlay.cornerRadius, style: .continuous),
+                interactive: false,
+                clear: true
+            )
+            .tahoeFolderPanelChrome()
     }
 
     private var folderPanel: some View {
@@ -483,15 +469,10 @@ struct FolderOverlayAppIcon: View {
         }
         .frame(width: LaunchConstants.FolderOverlay.gridItemWidth)
         .contentShape(Rectangle())
-        .opacity(state.draggedAppID == app.id ? LaunchConstants.Icon.draggedOpacity : 1)
         .onTapGesture {
             state.launch(app)
         }
-        .onDrag {
-            LaunchLog.line("folder app icon onDrag fired app=\(app.id) folder=\(folderID)")
-            state.beginDrag(app.id)
-            return dockItemProvider(for: app)
-        }
+        // ponytail: in-folder reordering is out of scope for the gesture-drag v1.
         .contextMenu {
             launcherAppContextMenu(app: app, state: state)
             Divider()
@@ -499,18 +480,5 @@ struct FolderOverlayAppIcon: View {
                 state.removeApp(app.id, fromFolder: folderID)
             }
         }
-        .onDrop(of: [.launchAppInternalID], delegate: AppDropDelegate(targetID: app.id, state: state))
     }
-}
-
-private func dockItemProvider(for app: LaunchApp) -> NSItemProvider {
-    let provider = NSItemProvider()
-    let appID = app.id
-    // Private UTType + ownProcess: only our .onDrop(of: .launchAppInternalID) matches — no public type advertised.
-    provider.registerDataRepresentation(for: .launchAppInternalID, visibility: .ownProcess) { completion in
-        completion(appID.data(using: .utf8), nil)
-        return nil
-    }
-    provider.suggestedName = appID
-    return provider
 }

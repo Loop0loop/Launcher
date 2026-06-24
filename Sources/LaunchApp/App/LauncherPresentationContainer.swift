@@ -1,13 +1,11 @@
 import AppKit
 
-/// Borderless windows can't become key by default, which blocks keyboard focus on the
-/// native search field. We only allow key focus while the user is actively editing the
-/// search field (set on click, cleared when editing ends) so the launcher doesn't sit
-/// on the keyboard the rest of the time.
-final class LauncherWindow: NSWindow {
-    var allowsKeyboardFocus = false
-    override var canBecomeKey: Bool { allowsKeyboardFocus }
-    override var canBecomeMain: Bool { allowsKeyboardFocus }
+/// Nonactivating panel: takes keyboard focus (search / type-ahead) and receives drags
+/// without activating the app or stealing focus from the frontmost app. This is the
+/// proper overlay window type for a Launchpad-style launcher (cf. macos-launchy).
+final class LauncherPanel: NSPanel {
+    override var canBecomeKey: Bool { true }
+    override var canBecomeMain: Bool { false }
 }
 
 /// Hosts SwiftUI content and receives open/close scale animation without breaking hit testing inside `NSHostingView`.

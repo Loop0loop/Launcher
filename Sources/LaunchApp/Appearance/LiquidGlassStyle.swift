@@ -5,84 +5,36 @@ extension View {
     func launchGlass(
         in shape: some InsettableShape,
         interactive: Bool = false,
+        clear: Bool = false,
         fallbackMaterial: Material = .ultraThinMaterial
     ) -> some View {
         if #available(macOS 26, *) {
-            let glass: Glass = interactive ? .regular.interactive() : .regular
+            // .clear = high-transparency variant (Liquid Glass). Use it for large
+            // surfaces (folder panel/tile) so wallpaper reads through. Do NOT layer
+            // materials/tints over glassEffect — that turns it into a milky card.
+            let base: Glass = clear ? .clear : .regular
+            let glass: Glass = interactive ? base.interactive() : base
             self.glassEffect(glass, in: shape)
         } else {
             self.background(fallbackMaterial, in: shape)
         }
     }
 
-    /// Tahoe-style search field: light Liquid Glass capsule (Spotlight / Apps inspired).
-    func tahoeSearchChrome() -> some View {
-        background {
-            Capsule()
-                .fill(.white.opacity(0.14))
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay {
-                    Capsule()
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [.white.opacity(0.45), .white.opacity(0.12)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            ),
-                            lineWidth: 0.5
-                        )
-                }
-        }
-    }
-
-
-    /// Tahoe-style folder tile: translucent dark Liquid Glass square (not opaque white).
+    /// 닫힌 폴더 타일: macOS 26 `.clear` real glass (구버전 material 폴백). 엣지/틴트 없음 —
+    /// 시스템 글래스가 굴절·스페큘러를 그린다. 위에 덧칠하면 우윳빛 카드가 된다.
     func launchpadFolderChrome(cornerRadius: CGFloat) -> some View {
-        background {
-            let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            shape
-                .fill(.ultraThinMaterial)
-                .overlay { shape.fill(.black.opacity(0.22)) }
-                .overlay {
-                    shape.strokeBorder(
-                        LinearGradient(
-                            colors: [.white.opacity(0.22), .white.opacity(0.05)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        lineWidth: 0.5
-                    )
-                }
-                .clipShape(shape)
-        }
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        return launchGlass(in: shape, interactive: false, clear: true)
     }
 
-    /// Tahoe-style Launchpad folder panel: a floating pane with a quiet glass edge.
-    func tahoeFolderPanelChrome(
-        cornerRadius: CGFloat = LaunchConstants.FolderOverlay.cornerRadius,
-        usesMaterial: Bool = true
-    ) -> some View {
-        background {
-            let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-            shape
-                .fill(.white.opacity(usesMaterial ? 0.12 : 0.05))
-                .background {
-                    if usesMaterial {
-                        shape.fill(.ultraThinMaterial)
-                    }
-                }
-                .overlay(alignment: .top) {
-                    shape.strokeBorder(
-                        LinearGradient(
-                            colors: [.white.opacity(0.5), .white.opacity(0.08)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        ),
-                        lineWidth: 0.75
-                    )
-                }
-                .shadow(color: .black.opacity(0.28), radius: 28, y: 18)
-        }
+    /// 열린 폴더 패널 크롬: 소프트 섀도만. 글래스·엣지·스페큘러는 상위 launchGlass가
+    /// 단일 표면으로 처리한다. (cornerRadius는 launchGlass shape이 이미 담당.)
+    func tahoeFolderPanelChrome() -> some View {
+        shadow(
+            color: .black.opacity(LaunchConstants.Glass.panelShadowOpacity),
+            radius: LaunchConstants.Glass.panelShadowRadius,
+            y: 18
+        )
     }
 
     /// Settings panel card: frosted glass with subtle edge highlight.

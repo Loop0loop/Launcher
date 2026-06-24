@@ -19,7 +19,6 @@ final class SearchFocusController {
         field.isEditable = true
         field.isSelectable = true
         field.isEnabled = true
-        (field.window as? LauncherWindow)?.allowsKeyboardFocus = true
         field.window?.makeKey()
         let accepted = field.window?.makeFirstResponder(field) ?? false
         shouldFocusOnShow = false

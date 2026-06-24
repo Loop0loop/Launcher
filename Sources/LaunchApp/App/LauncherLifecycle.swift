@@ -28,6 +28,10 @@ final class LauncherLifecycle {
         phase == .showing || phase == .shown || (window.isVisible && state.launcherVisible)
     }
 
+    var canHandleUserDismissal: Bool {
+        phase == .showing || phase == .shown
+    }
+
     func toggle() {
         if isVisible {
             hide()
@@ -50,9 +54,8 @@ final class LauncherLifecycle {
 
         state.launcherVisible = true
         state.pageDragOffset = 0
-        // Don't grab the keyboard on open — focus the search field only when it's clicked.
-        state.searchFocus.shouldFocusOnShow = false
-        (window as? LauncherWindow)?.allowsKeyboardFocus = false
+        // Nonactivating panel can hold keyboard focus, so type-ahead works on open.
+        state.searchFocus.shouldFocusOnShow = true
         applyWindowBrowsingMode()
 
         preparePresentationLayer()

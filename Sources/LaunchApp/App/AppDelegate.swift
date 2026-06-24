@@ -39,12 +39,14 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     func makeWindow() {
         LaunchLog.app.info("makeWindow")
         let frame = NSScreen.main?.frame ?? LaunchConstants.App.fallbackWindowFrame
-        let window = LauncherWindow(
+        let window = LauncherPanel(
             contentRect: frame,
-            styleMask: [.borderless],
+            styleMask: [.borderless, .nonactivatingPanel, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
+        window.hidesOnDeactivate = false
+        window.isFloatingPanel = false
         let presentationContainer = LauncherPresentationContainer()
         presentationContainer.wantsLayer = true
 
@@ -69,6 +71,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         state.actions = LauncherActions(
             close: { [weak self] in self?.launcherLifecycle?.hide() },
             dismiss: { [weak self] in self?.launcherLifecycle?.dismiss() },
+            canHandleUserDismissal: { [weak self] in self?.launcherLifecycle?.canHandleUserDismissal == true },
             launch: { [weak self] app in self?.launcherLifecycle?.launch(app) },
             showInFinder: { [weak self] app in self?.launcherLifecycle?.revealInFinder(app) },
             moveToTrash: { [weak self] app in self?.confirmMoveToTrash(app) },
@@ -298,16 +301,20 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
                     self.launcherLifecycle?.hide()
                 }
             case .previousPage:
-                if self.launcherLifecycle?.isVisible == true {
+                if self.launcherLifecycle?.isVisible == true, !self.state.isDraggingLauncherItem {
                     withAnimation(LaunchConstants.Animation.spring) {
                         self.state.changePage(-1)
                     }
+                } else if self.state.isDraggingLauncherItem {
+                    LaunchLog.line("trackpad previousPage ignored during drag")
                 }
             case .nextPage:
-                if self.launcherLifecycle?.isVisible == true {
+                if self.launcherLifecycle?.isVisible == true, !self.state.isDraggingLauncherItem {
                     withAnimation(LaunchConstants.Animation.spring) {
                         self.state.changePage(1)
                     }
+                } else if self.state.isDraggingLauncherItem {
+                    LaunchLog.line("trackpad nextPage ignored during drag")
                 }
             }
         }

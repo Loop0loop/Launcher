@@ -81,6 +81,14 @@ enum LaunchConstants {
         static let settingsBackdropOpacity = 0.18
     }
 
+    /// Liquid Glass 튜닝 노브. 폴더 패널/타일은 `.clear` glassEffect에 시스템
+    /// 스페큘러/엣지/굴절을 맡긴다 — 여기서 덧칠하지 않는다(우윳빛 카드 방지).
+    /// 남은 건 패널 섀도 하나.
+    enum Glass {
+        static let panelShadowOpacity: CGFloat = 0.28
+        static let panelShadowRadius: CGFloat = 28
+    }
+
     enum Storage {
         static let layoutOrderKey = "layoutOrder"
         static let foldersKey = "folders"

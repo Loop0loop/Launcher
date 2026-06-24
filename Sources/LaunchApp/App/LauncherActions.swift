@@ -4,6 +4,7 @@ import LaunchCore
 struct LauncherActions {
     var close: () -> Void = {}
     var dismiss: () -> Void = {}
+    var canHandleUserDismissal: () -> Bool = { true }
     var launch: (LaunchApp) -> Void = { _ in }
     var showInFinder: (LaunchApp) -> Void = { _ in }
     var moveToTrash: (LaunchApp) -> Void = { _ in }
