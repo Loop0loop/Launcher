@@ -1,6 +1,9 @@
 extension AppState {
     func refreshLoginItemStatus() {
         launchAtLogin = LoginItemAdapter.isEnabled
+        if launchAtLogin {
+            loginItemError = nil
+        }
     }
 
     func setLaunchAtLogin(_ enabled: Bool) {
@@ -21,6 +24,10 @@ extension AppState {
     }
 
     func requestAccessibilityPermission() {
+        guard !AccessibilityAdapter.isTrusted else {
+            refreshAccessibilityStatus()
+            return
+        }
         accessibilityTrusted = AccessibilityAdapter.requestPermission()
         accessibilityState = accessibilityTrusted ? .allowed : .needsApproval
     }

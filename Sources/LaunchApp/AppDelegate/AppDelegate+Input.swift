@@ -16,6 +16,7 @@ extension AppDelegate {
         } onIntent: { [weak self] intent in
             guard let self else { return }
             guard state.trackpadSetting != "Disabled" else { return }
+            guard settingsWindow?.isVisible != true else { return }
             let now = Date()
             guard now >= trackpadIntentLockedUntil else {
                 LaunchLog.line("trackpad intent blocked cooldown")

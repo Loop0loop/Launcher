@@ -9,6 +9,7 @@ final class TrackpadGestureMonitor {
     private var lastScrollIntentTime: TimeInterval = 0
     private var lastPinchIntentTime: TimeInterval = 0
     private var isScrollLocked = false
+    private var scrollUnlockTask: Task<Void, Never>?
 
     func start(
         onGateStatus: @escaping @MainActor (Bool) -> Void,
@@ -39,12 +40,15 @@ final class TrackpadGestureMonitor {
                         onIntent(intent)
                     }
                 } else if event.type == .swipe {
+                    guard !self.pinchMonitor.hasRecentQualifiedTouch else { return }
                     if event.phase.contains(.ended) || event.phase.contains(.cancelled) {
                         self.isScrollLocked = false
+                        self.scrollUnlockTask?.cancel()
                         return
                     }
                     if event.phase.contains(.began) {
                         self.isScrollLocked = false
+                        self.scrollUnlockTask?.cancel()
                     }
                     if self.isScrollLocked { return }
                     
@@ -54,15 +58,18 @@ final class TrackpadGestureMonitor {
                         onIntent(intent)
                     }
                 } else if event.type == .scrollWheel {
+                    guard !self.pinchMonitor.hasRecentQualifiedTouch else { return }
                     let hasPhase = !event.phase.isEmpty || !event.momentumPhase.isEmpty
                     if hasPhase {
                         let isEnded = event.phase.contains(.ended) || event.phase.contains(.cancelled) || event.momentumPhase.contains(.ended)
                         if isEnded {
                             self.isScrollLocked = false
+                            self.scrollUnlockTask?.cancel()
                             return
                         }
                         if event.phase.contains(.began) {
                             self.isScrollLocked = false
+                            self.scrollUnlockTask?.cancel()
                         }
                     }
                     
@@ -81,9 +88,8 @@ final class TrackpadGestureMonitor {
                             
                             if timeDiff > minInterval {
                                 self.lastScrollIntentTime = now
-                                if hasPhase {
-                                    self.isScrollLocked = true
-                                }
+                                self.isScrollLocked = true
+                                self.unlockScrollAfter(LaunchConstants.Launcher.pageChangeCooldown)
                                 LaunchLog.line("scroll event deltaX=\(event.scrollingDeltaX) intent=\(intent)")
                                 onIntent(intent)
                             }
@@ -115,7 +121,24 @@ final class TrackpadGestureMonitor {
         lastScrollIntentTime = 0
         lastPinchIntentTime = 0
         isScrollLocked = false
+        scrollUnlockTask?.cancel()
+        scrollUnlockTask = nil
         pinchMonitor.stop()
+    }
+
+    private func unlockScrollAfter(_ interval: TimeInterval) {
+        scrollUnlockTask?.cancel()
+        scrollUnlockTask = Task { [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
+                try Task.checkCancellation()
+            } catch {
+                return
+            }
+            await MainActor.run {
+                self?.isScrollLocked = false
+            }
+        }
     }
 }
 
@@ -166,6 +189,7 @@ final class PinchContactMonitor {
     private var devices: [MTDeviceRef] = []
     private var initialRadius: Double?
     private var lastIntentTime: Double = 0
+    private var lastQualifiedTouchTime: TimeInterval = 0
     private var onPinch: (@MainActor (TrackpadIntent) -> Void)?
     nonisolated(unsafe) fileprivate static var current: PinchContactMonitor?
 
@@ -214,6 +238,13 @@ final class PinchContactMonitor {
         onPinch = nil
         initialRadius = nil
         lastIntentTime = 0
+        lastQualifiedTouchTime = 0
+    }
+
+    var hasRecentQualifiedTouch: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return Date().timeIntervalSinceReferenceDate - lastQualifiedTouchTime < 0.45
     }
 
     fileprivate func process(touches: [TouchPoint], timestamp: Double) {
@@ -225,6 +256,7 @@ final class PinchContactMonitor {
             initialRadius = nil
             return
         }
+        lastQualifiedTouchTime = Date().timeIntervalSinceReferenceDate
 
         let selected = Array(touches.sorted { $0.id < $1.id }.prefix(requiredCount))
         let centerX = selected.map(\.x).reduce(0, +) / Double(selected.count)

@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 @MainActor
-public final class AppDelegate: NSObject, NSApplicationDelegate {
+public final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegate {
     let state = AppState()
     let iconCache = IconCache()
     let trackpadMonitor = TrackpadGestureMonitor()
@@ -34,6 +34,11 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         startHotCornerMonitor()
         startTrackpadMonitor()
         startKeyMonitor()
+    }
+
+    public func applicationDidBecomeActive(_ notification: Notification) {
+        state.refreshAccessibilityStatus()
+        state.refreshLoginItemStatus()
     }
 
     func makeWindow() {

@@ -12,6 +12,7 @@ struct SettingsView: View {
         ZStack {
             VisualEffectView(material: .windowBackground, blendingMode: .behindWindow)
                 .ignoresSafeArea()
+                .allowsHitTesting(false)
 
             VStack(spacing: 0) {
                 SettingsTabBar(selection: $tab)
@@ -214,7 +215,9 @@ struct SettingsView: View {
                 SettingsStatusRow(title: LaunchConstants.Settings.trackpad, status: state.trackpadGateState.label, positive: state.trackpadGateState == .exactPinch)
                 SettingsStatusRow(title: LaunchConstants.Settings.globalHotKey, status: state.globalHotKeyState.label, positive: state.globalHotKeyState == .allowed)
                 SettingsStatusRow(title: LaunchConstants.Settings.f4Key, status: state.f4KeyState.label, positive: state.f4KeyState == .allowed)
-                SettingsActionRow(title: LaunchConstants.Settings.requestAccessibility) { state.requestAccessibilityPermission() }
+                if state.accessibilityState != .allowed {
+                    SettingsActionRow(title: LaunchConstants.Settings.requestAccessibility) { state.requestAccessibilityPermission() }
+                }
             }
 
             SettingsSection(title: Localized.t("창", "Window")) {

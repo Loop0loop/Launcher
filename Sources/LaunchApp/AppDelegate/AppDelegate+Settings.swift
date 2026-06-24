@@ -10,6 +10,14 @@ extension AppDelegate {
     }
 
     private func handleShowSettings() {
+        if launcherLifecycle?.isVisible == true {
+            launcherLifecycle?.dismiss()
+        }
+        trackpadMonitor.stop()
+        state.setTrackpadGateActive(false)
+        state.refreshAccessibilityStatus()
+        state.refreshLoginItemStatus()
+
         if settingsWindow == nil {
             let window = NSPanel(
                 contentRect: .init(
@@ -29,7 +37,8 @@ extension AppDelegate {
             window.hasShadow = true
             window.isFloatingPanel = true
             window.becomesKeyOnlyIfNeeded = false
-            window.level = .screenSaver
+            window.level = .floating
+            window.delegate = self
             let hosting = NSHostingView(rootView: SettingsView(state: state))
             hosting.safeAreaRegions = []
             window.contentView = hosting
@@ -40,6 +49,11 @@ extension AppDelegate {
 
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+    }
+
+    public func windowWillClose(_ notification: Notification) {
+        guard notification.object as? NSWindow === settingsWindow else { return }
+        startTrackpadMonitor()
     }
 
     func chooseAppSource() {
@@ -54,4 +68,3 @@ extension AppDelegate {
         }
     }
 }
-
