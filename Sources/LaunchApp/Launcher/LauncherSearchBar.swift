@@ -6,7 +6,10 @@ final class LauncherSearchBarView: NSView {
     let textField = LauncherSearchNSTextField()
     private let iconView = NSImageView()
     private let clearButton = NSButton()
-    private let chromeView = NSVisualEffectView()
+    private let contentView = NSView()
+    private var chromeView: NSView?
+    private var glassChromeView: NSView?
+    private var visualChromeView: NSVisualEffectView?
     private var onTextChange: ((String) -> Void)?
     private var onClear: (() -> Void)?
 
@@ -30,21 +33,14 @@ final class LauncherSearchBarView: NSView {
     private func configure() {
         wantsLayer = true
 
-        chromeView.material = .hudWindow
-        chromeView.blendingMode = .withinWindow
-        // Only show the vibrant/active chrome while the field is focused (clicked).
-        chromeView.state = .inactive
-        chromeView.wantsLayer = true
-        chromeView.layer?.cornerRadius = LaunchConstants.Launcher.searchHeight / 2
-        chromeView.layer?.masksToBounds = true
-        addSubview(chromeView)
+        configureChrome()
 
         if let icon = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: nil) {
             iconView.image = icon
             iconView.contentTintColor = NSColor.white.withAlphaComponent(0.7)
             iconView.imageScaling = .scaleProportionallyDown
         }
-        addSubview(iconView)
+        contentView.addSubview(iconView)
 
         textField.isBordered = false
         textField.isBezeled = false
@@ -53,6 +49,9 @@ final class LauncherSearchBarView: NSView {
         textField.isEditable = true
         textField.isSelectable = true
         textField.isEnabled = true
+        textField.cell?.usesSingleLineMode = true
+        textField.cell?.wraps = false
+        textField.cell?.isScrollable = true
         textField.placeholderString = LaunchConstants.Launcher.searchPlaceholder
         textField.font = NSFont.systemFont(ofSize: LaunchConstants.Launcher.searchFontSize, weight: .regular)
         textField.textColor = .white
@@ -62,22 +61,62 @@ final class LauncherSearchBarView: NSView {
         )
         textField.target = self
         textField.action = #selector(textDidChange)
-        addSubview(textField)
+        contentView.addSubview(textField)
 
         clearButton.isBordered = false
-        clearButton.bezelStyle = .inline
+        if #available(macOS 26.0, *) {
+            clearButton.bezelStyle = .glass
+        } else {
+            clearButton.bezelStyle = .inline
+        }
         clearButton.image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: "Clear")
         clearButton.imagePosition = .imageOnly
         clearButton.contentTintColor = NSColor.white.withAlphaComponent(0.55)
         clearButton.target = self
         clearButton.action = #selector(clearTapped)
         clearButton.isHidden = true
-        addSubview(clearButton)
+        contentView.addSubview(clearButton)
+    }
+
+    private func configureChrome() {
+        if #available(macOS 26.0, *) {
+            let glass = NSGlassEffectView()
+            glass.style = .regular
+            glass.cornerRadius = LaunchConstants.Launcher.searchHeight / 2
+            glass.tintColor = NSColor.white.withAlphaComponent(0.10)
+            glass.wantsLayer = true
+            glass.layer?.shadowColor = NSColor.black.cgColor
+            glass.layer?.shadowOpacity = 0.22
+            glass.layer?.shadowRadius = 16
+            glass.layer?.shadowOffset = NSSize(width: 0, height: -4)
+            glass.contentView = contentView
+            addSubview(glass)
+            chromeView = glass
+            glassChromeView = glass
+        } else {
+            let visual = NSVisualEffectView()
+            visual.material = .hudWindow
+            visual.blendingMode = .withinWindow
+            visual.state = .inactive
+            visual.wantsLayer = true
+            visual.layer?.cornerRadius = LaunchConstants.Launcher.searchHeight / 2
+            visual.layer?.masksToBounds = true
+            addSubview(visual)
+            addSubview(contentView)
+            chromeView = visual
+            visualChromeView = visual
+        }
+
+        wantsLayer = true
+        layer?.cornerRadius = LaunchConstants.Launcher.searchHeight / 2
+        layer?.masksToBounds = false
     }
 
     override func layout() {
         super.layout()
-        chromeView.frame = bounds
+        chromeView?.frame = bounds
+        contentView.frame = bounds
+        addChromeHighlights()
 
         let padding = LaunchConstants.Launcher.searchHorizontalPadding
         let iconSide: CGFloat = 16
@@ -93,14 +132,35 @@ final class LauncherSearchBarView: NSView {
 
         let textX = iconView.frame.maxX + 8
         let textWidth = max(0, clearButton.frame.minX - 8 - textX)
-        // Vertically center the single-line text (NSTextField top-aligns by default).
         let font = textField.font ?? NSFont.systemFont(ofSize: LaunchConstants.Launcher.searchFontSize)
-        let textHeight = ceil(font.ascender - font.descender) + 4
-        textField.frame = NSRect(x: textX, y: (bounds.height - textHeight) / 2, width: textWidth, height: textHeight)
+        let textHeight = ceil(font.ascender - font.descender) + 6
+        textField.frame = NSRect(x: textX, y: (bounds.height - textHeight) / 2 + 4, width: textWidth, height: textHeight)
+    }
+
+    private func addChromeHighlights() {
+        guard let layer else { return }
+        layer.sublayers?.removeAll { $0.name == "searchChromeHighlight" }
+
+        let shape = CAShapeLayer()
+        shape.name = "searchChromeHighlight"
+        shape.frame = bounds
+        shape.path = CGPath(
+            roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5),
+            cornerWidth: LaunchConstants.Launcher.searchHeight / 2,
+            cornerHeight: LaunchConstants.Launcher.searchHeight / 2,
+            transform: nil
+        )
+        shape.fillColor = NSColor.clear.cgColor
+        shape.strokeColor = NSColor.white.withAlphaComponent(0.24).cgColor
+        shape.lineWidth = 0.8
+        layer.addSublayer(shape)
     }
 
     func setActive(_ active: Bool) {
-        chromeView.state = active ? .active : .inactive
+        visualChromeView?.state = active ? .active : .inactive
+        if #available(macOS 26.0, *) {
+            (glassChromeView as? NSGlassEffectView)?.tintColor = NSColor.white.withAlphaComponent(active ? 0.16 : 0.10)
+        }
     }
 
     func updateText(_ text: String) {

@@ -1,9 +1,8 @@
 import AppKit
 
-/// Empty-space page swiping only. Icon dragging is owned by SwiftUI `DragGesture`
-/// (see `LauncherDragModifier`); dismissal and folder close are owned by SwiftUI tap layers.
-/// When an icon drag is active (`isDraggingLauncherItem`) paging backs off so the grid
-/// doesn't shift under the dragged tile.
+/// Empty-space page swiping plus Launchpad-style icon-drag paging. Icon dragging is
+/// owned by SwiftUI `DragGesture`; this monitor only decides when horizontal movement
+/// should reveal another page.
 @MainActor
 final class LauncherMouseMonitor {
     private weak var window: NSWindow?
@@ -70,11 +69,6 @@ final class LauncherMouseMonitor {
 
     private func dragged(_ event: NSEvent, _ state: AppState) -> NSEvent? {
         guard tracking else { return event }
-        // A SwiftUI icon drag has taken over — stop paging so the grid doesn't shift.
-        if state.isDraggingLauncherItem {
-            reset()
-            return event
-        }
         dragOffset += event.deltaX
         let pageWidth = window?.frame.width ?? 0
         guard pageWidth > 0 else { return event }
@@ -82,6 +76,18 @@ final class LauncherMouseMonitor {
         let maxRubber = pageWidth * LaunchConstants.Launcher.pageRubberBandRatio
         if dragStartPage == 0, dragOffset > 0 { dragOffset = min(dragOffset, maxRubber) }
         if dragStartPage == state.pageCount - 1, dragOffset < 0 { dragOffset = max(dragOffset, -maxRubber) }
+
+        if state.isDraggingLauncherItem {
+            if Date() >= pageLockedUntil, let target = targetPage(pageWidth: pageWidth, state: state) {
+                state.selectPage(target)
+                dragStartPage = target
+                dragOffset = 0
+                state.pageDragOffset = 0
+                pageLockedUntil = Date().addingTimeInterval(LaunchConstants.Launcher.pageChangeCooldown)
+            }
+            return event
+        }
+
         state.pageDragOffset = dragOffset
         return event
     }
@@ -92,6 +98,14 @@ final class LauncherMouseMonitor {
         let pageWidth = window?.frame.width ?? 0
         guard abs(dragOffset) >= LaunchConstants.Launcher.dragMinimumDistance, pageWidth > 0 else { return event }
 
+        if let target = targetPage(pageWidth: pageWidth, state: state) {
+            state.selectPage(target)
+            pageLockedUntil = Date().addingTimeInterval(LaunchConstants.Launcher.pageChangeCooldown)
+        }
+        return event
+    }
+
+    private func targetPage(pageWidth: CGFloat, state: AppState) -> Int? {
         let threshold = max(pageWidth * LaunchConstants.Launcher.pageSwipeThresholdRatio, LaunchConstants.Launcher.pageDragThreshold)
         var target = dragStartPage
         if dragOffset < -threshold {
@@ -99,10 +113,6 @@ final class LauncherMouseMonitor {
         } else if dragOffset > threshold {
             target = max(dragStartPage - 1, 0)
         }
-        if target != dragStartPage {
-            state.selectPage(target)
-            pageLockedUntil = Date().addingTimeInterval(LaunchConstants.Launcher.pageChangeCooldown)
-        }
-        return event
+        return target == dragStartPage ? nil : target
     }
 }
