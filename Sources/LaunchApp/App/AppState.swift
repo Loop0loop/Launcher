@@ -26,6 +26,8 @@ final class AppState: ObservableObject {
     @Published var launcherVisible = false
     @Published var pageDragOffset: CGFloat = 0
     weak var searchField: NSTextField?
+    weak var searchBarView: LauncherSearchBarView?
+    var shouldFocusSearchOnShow = false
     @Published var appSourcePaths = AppSourceStore.load()
     @Published var hiddenAppIDs = Set(LayoutPersistenceAdapter.stringArray(forKey: LaunchConstants.Storage.hiddenAppsKey))
     @Published var gridLayout = GridLayoutStore.load() {

@@ -40,6 +40,7 @@ final class LauncherLifecycle {
         applyWindowBrowsingMode()
         state.launcherVisible = true
         state.pageDragOffset = 0
+        state.shouldFocusSearchOnShow = true
 
         preparePresentationLayer()
         setPresentationScale(LaunchConstants.Lifecycle.hiddenScale)
@@ -48,10 +49,8 @@ final class LauncherLifecycle {
         NSApp.activate(ignoringOtherApps: true)
         mouseMonitor?.setEnabled(true)
 
-        runPresentationAnimation(toVisible: true) { [weak self] in
-            DispatchQueue.main.async {
-                self?.state.focusSearchField()
-            }
+        runPresentationAnimation(toVisible: true) {
+            // Focus is applied once via shouldFocusSearchOnShow when the bar mounts.
         }
         LaunchLog.line("lifecycle show requested visible=\(state.launcherVisible)")
     }

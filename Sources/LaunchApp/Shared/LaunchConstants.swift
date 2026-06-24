@@ -18,6 +18,7 @@ enum LaunchConstants {
         static let showInFinder = "Show in Finder"
         static let addToDock = "Add App to Dock"
         static let hide = "Hide"
+        static let removeFromFolder = "Remove from Folder"
         static let moveToTrash = "Move to Trash"
         static let quit = "Quit"
 

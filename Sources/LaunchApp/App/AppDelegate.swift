@@ -38,7 +38,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     func makeWindow() {
         LaunchLog.app.info("makeWindow")
         let frame = NSScreen.main?.frame ?? LaunchConstants.App.fallbackWindowFrame
-        let window = NSWindow(
+        let window = LauncherWindow(
             contentRect: frame,
             styleMask: [.borderless],
             backing: .buffered,

@@ -42,6 +42,33 @@ let reorderedFolderResult = FolderLayout.createFolder(
 )
 assert(reorderedFolderResult.order == ["folder-2", "b"])
 
+let addToFolderResult = FolderLayout.addApp(
+    appID: "b",
+    toFolderID: "folder",
+    folders: [LaunchFolder(id: "folder", name: "Folder", appIDs: ["a", "c"])],
+    order: ["folder", "b"]
+)
+assert(addToFolderResult.folders == [LaunchFolder(id: "folder", name: "Folder", appIDs: ["a", "c", "b"])])
+assert(addToFolderResult.order == ["folder"])
+
+let removeFromFolderResult = FolderLayout.removeApp(
+    appID: "b",
+    fromFolderID: "folder",
+    folders: [LaunchFolder(id: "folder", name: "Folder", appIDs: ["a", "b", "c"])],
+    order: ["folder"]
+)
+assert(removeFromFolderResult.folders == [LaunchFolder(id: "folder", name: "Folder", appIDs: ["a", "c"])])
+assert(removeFromFolderResult.order == ["folder", "b"])
+
+let dissolveFolderResult = FolderLayout.removeApp(
+    appID: "b",
+    fromFolderID: "folder",
+    folders: [LaunchFolder(id: "folder", name: "Folder", appIDs: ["a", "b"])],
+    order: ["folder", "c"]
+)
+assert(dissolveFolderResult.folders.isEmpty)
+assert(dissolveFolderResult.order == ["a", "b", "c"])
+
 let cleanup = LayoutCleanup.cleanup(
     folders: [LaunchFolder(id: "folder", name: "Folder", appIDs: ["a", "missing"])],
     order: ["folder", "missing", "a"],

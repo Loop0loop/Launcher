@@ -27,4 +27,46 @@ public enum FolderLayout {
         nextOrder.insert(id, at: min(draggedIndex, targetIndex, nextOrder.count))
         return (folders + [folder], nextOrder)
     }
+
+    public static func addApp(
+        appID: String,
+        toFolderID folderID: String,
+        folders: [LaunchFolder],
+        order: [String]
+    ) -> (folders: [LaunchFolder], order: [String]) {
+        guard let index = folders.firstIndex(where: { $0.id == folderID }),
+              !folders[index].appIDs.contains(appID) else { return (folders, order) }
+
+        var nextFolders = folders
+        nextFolders[index].appIDs.append(appID)
+        return (nextFolders, order.filter { $0 != appID })
+    }
+
+    public static func removeApp(
+        appID: String,
+        fromFolderID folderID: String,
+        folders: [LaunchFolder],
+        order: [String]
+    ) -> (folders: [LaunchFolder], order: [String]) {
+        guard let index = folders.firstIndex(where: { $0.id == folderID }),
+              folders[index].appIDs.contains(appID) else { return (folders, order) }
+
+        var nextFolders = folders
+        var folder = nextFolders[index]
+        folder.appIDs.removeAll { $0 == appID }
+
+        var nextOrder = order.filter { $0 != appID }
+        let folderIndex = nextOrder.firstIndex(of: folderID) ?? nextOrder.count
+
+        if folder.appIDs.count <= 1 {
+            nextFolders.remove(at: index)
+            nextOrder.removeAll { $0 == folderID || folder.appIDs.contains($0) }
+            nextOrder.insert(contentsOf: folder.appIDs + [appID], at: min(folderIndex, nextOrder.count))
+        } else {
+            nextFolders[index] = folder
+            nextOrder.insert(appID, at: min(folderIndex + 1, nextOrder.count))
+        }
+
+        return (nextFolders, nextOrder)
+    }
 }

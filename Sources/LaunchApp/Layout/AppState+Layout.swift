@@ -48,9 +48,11 @@ extension AppState {
 
     func createFolder(draggedID: String, targetID: String) {
         guard folders.allSatisfy({ !$0.appIDs.contains(draggedID) && !$0.appIDs.contains(targetID) }) else {
+            LaunchLog.line("create folder blocked dragged=\(draggedID) target=\(targetID)")
             return
         }
 
+        LaunchLog.line("create folder dragged=\(draggedID) target=\(targetID)")
         let result = FolderLayout.createFolder(
             id: "folder-\(UUID().uuidString)",
             draggedID: draggedID,
@@ -62,6 +64,43 @@ extension AppState {
         layoutStore.saveFolders(folders)
         saveOrder(result.order)
         openFolder = folders.last
+    }
+
+    func addApp(_ appID: String, toFolder folderID: String) {
+        guard query.isEmpty else { return }
+        guard folders.allSatisfy({ !$0.appIDs.contains(appID) }) else { return }
+        LaunchLog.line("add app to folder app=\(appID) folder=\(folderID)")
+        let result = FolderLayout.addApp(
+            appID: appID,
+            toFolderID: folderID,
+            folders: folders,
+            order: visibleItems.map(\.id)
+        )
+        folders = result.folders
+        layoutStore.saveFolders(folders)
+        saveOrder(result.order)
+        openFolder = folders.first { $0.id == folderID }
+    }
+
+    func removeApp(_ appID: String, fromFolder folderID: String) {
+        let result = FolderLayout.removeApp(
+            appID: appID,
+            fromFolderID: folderID,
+            folders: folders,
+            order: visibleItems.map(\.id)
+        )
+        folders = result.folders
+        layoutStore.saveFolders(folders)
+        saveOrder(result.order)
+        openFolder = folders.first { $0.id == folderID }
+    }
+
+    func renameFolder(_ folderID: String, to name: String) {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let index = folders.firstIndex(where: { $0.id == folderID }) else { return }
+        folders[index].name = trimmed
+        layoutStore.saveFolders(folders)
+        openFolder = folders[index]
     }
 
     func apps(in folder: LaunchFolder) -> [LaunchApp] {
@@ -90,8 +129,13 @@ extension AppState {
         if draggedID == targetID { return }
 
         if appByID(targetID) != nil, appByID(draggedID) != nil {
+            LaunchLog.line("drop app on app dragged=\(draggedID) target=\(targetID)")
             createFolder(draggedID: draggedID, targetID: targetID)
+        } else if folders.contains(where: { $0.id == targetID }), appByID(draggedID) != nil {
+            LaunchLog.line("drop app on folder dragged=\(draggedID) target=\(targetID)")
+            addApp(draggedID, toFolder: targetID)
         } else {
+            LaunchLog.line("drop app move dragged=\(draggedID) target=\(targetID)")
             move(draggedID, before: targetID)
         }
     }

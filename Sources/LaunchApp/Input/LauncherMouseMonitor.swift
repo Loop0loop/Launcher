@@ -11,6 +11,7 @@ final class LauncherMouseMonitor {
     private var dragOffset: CGFloat = 0
     private var dragStartPage = 0
     private var pageLockedUntil = Date.distantPast
+    private var mouseDownStartedOnItem = false
 
     func configure(window: NSWindow, state: AppState) {
         self.window = window
@@ -57,9 +58,14 @@ final class LauncherMouseMonitor {
     }
 
     private func handleMouseDown(_ event: NSEvent, state: AppState) -> NSEvent? {
-        if isSearchClick(event) {
+        if hitsSearchBar(event) {
             LaunchLog.line("mouse search click down")
             state.focusSearchField()
+            return event
+        }
+
+        mouseDownStartedOnItem = hitsLauncherItem(event)
+        if mouseDownStartedOnItem {
             return event
         }
 
@@ -96,11 +102,16 @@ final class LauncherMouseMonitor {
         defer {
             dragOffset = 0
             state.pageDragOffset = 0
+            mouseDownStartedOnItem = false
         }
 
-        if isSearchClick(event) {
+        if hitsSearchBar(event) {
             LaunchLog.line("mouse search click up")
             state.focusSearchField()
+            return event
+        }
+
+        if mouseDownStartedOnItem {
             return event
         }
 
@@ -132,41 +143,84 @@ final class LauncherMouseMonitor {
         return event
     }
 
-    private func isSearchClick(_ event: NSEvent) -> Bool {
+    private func hitsSearchBar(_ event: NSEvent) -> Bool {
         guard let window, let contentView = window.contentView else { return false }
         let point = contentView.convert(event.locationInWindow, from: nil)
+
+        if let bar = state?.searchBarView {
+            let local = bar.convert(point, from: contentView)
+            if bar.bounds.contains(local) {
+                return true
+            }
+        }
+
+        return searchBarLayoutRect(in: contentView)?.contains(point) == true
+    }
+
+    private func searchBarLayoutRect(in contentView: NSView) -> NSRect? {
+        guard let state else { return nil }
         let size = contentView.bounds.size
+        guard size.width > 0, size.height > 0 else { return nil }
+
         let layout = LaunchpadLayoutMetrics(
             size: size,
-            columns: state?.gridLayout.columns ?? LaunchConstants.Launcher.columns,
-            rows: state?.gridLayout.rows ?? LaunchConstants.Launcher.rows
+            columns: state.gridLayout.columns,
+            rows: state.gridLayout.rows
         )
-        let searchX = (size.width - LaunchConstants.Launcher.searchWidth) / 2
-        let searchY = size.height - layout.safeTopInset - layout.searchBarHeight
-        let searchRect = NSRect(
-            x: searchX - 40,
-            y: searchY - 12,
-            width: LaunchConstants.Launcher.searchWidth + 80,
-            height: layout.searchBarHeight + 24
-        )
-        return searchRect.contains(point)
+        let width = LaunchConstants.Launcher.searchWidth + 24
+        let height = layout.searchBarHeight + 16
+        let x = (size.width - width) / 2
+        let y = layout.safeTopInset - 8
+        return NSRect(x: x, y: y, width: width, height: height)
     }
 
     private func isBackgroundClick(_ event: NSEvent) -> Bool {
-        if isSearchClick(event) { return false }
+        if hitsSearchBar(event) { return false }
+        if hitsLauncherItem(event) { return false }
         guard let window, let contentView = window.contentView else { return false }
         let point = contentView.convert(event.locationInWindow, from: nil)
         guard let hit = contentView.hitTest(point) else { return true }
         return !isInteractiveView(hit)
     }
 
+    private func hitsLauncherItem(_ event: NSEvent) -> Bool {
+        guard let window, let contentView = window.contentView, let state else { return false }
+        guard state.openFolder == nil, state.query.isEmpty else { return false }
+
+        let point = contentView.convert(event.locationInWindow, from: nil)
+        let size = contentView.bounds.size
+        guard size.width > 0, size.height > 0 else { return false }
+
+        let layout = LaunchpadLayoutMetrics(
+            size: size,
+            columns: state.gridLayout.columns,
+            rows: state.gridLayout.rows
+        )
+        let showsPageControl = state.pageCount > 1
+        let gridHeight = layout.gridHeight(showsPageControl: showsPageControl)
+        let yFromTop = size.height - point.y
+        let gridTop = layout.topChromeHeight
+        guard yFromTop >= gridTop, yFromTop <= gridTop + gridHeight else { return false }
+
+        let column = Int((point.x / max(size.width, 1)) * CGFloat(layout.columns))
+        let row = Int(((yFromTop - gridTop) / max(gridHeight, 1)) * CGFloat(layout.rows))
+        guard column >= 0, column < layout.columns, row >= 0, row < layout.rows else { return false }
+
+        let index = row * layout.columns + column
+        let hit = index < state.items(forPage: state.currentPage).count
+        if hit {
+            LaunchLog.line("mouse item click page=\(state.currentPage) index=\(index)")
+        }
+        return hit
+    }
+
     private func isInteractiveView(_ view: NSView) -> Bool {
         var current: NSView? = view
         while let view = current {
+            if view is LauncherSearchBarView { return true }
             if view is NSControl { return true }
             if view is NSTextView { return true }
             if view is NSScrollView { return true }
-            if String(describing: type(of: view)).contains("TextField") { return true }
             current = view.superview
         }
         return false

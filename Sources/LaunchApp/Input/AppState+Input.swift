@@ -37,6 +37,11 @@ extension AppState {
         handleEscape()
     }
 
+    func registerSearchBar(_ bar: LauncherSearchBarView) {
+        searchBarView = bar
+        searchField = bar.textField
+    }
+
     func focusSearchField() {
         guard let searchField else {
             LaunchLog.line("search focus skipped field=nil")
@@ -47,8 +52,8 @@ extension AppState {
         searchField.isEnabled = true
         searchField.window?.makeKey()
         let accepted = searchField.window?.makeFirstResponder(searchField) ?? false
-        let responder = String(describing: type(of: searchField.window?.firstResponder as Any))
-        LaunchLog.line("search focus ok=\(accepted) responder=\(responder)")
+        shouldFocusSearchOnShow = false
+        LaunchLog.line("search focus ok=\(accepted)")
     }
 
     func isSearchFieldFocused() -> Bool {

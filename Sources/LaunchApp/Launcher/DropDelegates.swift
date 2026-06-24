@@ -5,12 +5,14 @@ struct AppDropDelegate: DropDelegate {
     var state: AppState
 
     func dropEntered(info: DropInfo) {
-        guard let dragged = state.draggedAppID else { return }
-        state.move(dragged, before: targetID)
+        if let dragged = state.draggedAppID {
+            LaunchLog.line("app drop entered dragged=\(dragged) target=\(targetID)")
+        }
     }
 
     func performDrop(info: DropInfo) -> Bool {
         if let dragged = state.draggedAppID {
+            LaunchLog.line("app drop perform dragged=\(dragged) target=\(targetID)")
             state.dropApp(dragged, on: targetID)
         }
         state.draggedAppID = nil
@@ -23,13 +25,17 @@ struct FolderDropDelegate: DropDelegate {
     var state: AppState
 
     func dropEntered(info: DropInfo) {
-        guard let dragged = state.draggedAppID else { return }
-        state.move(dragged, before: targetID)
+        if let dragged = state.draggedAppID {
+            LaunchLog.line("folder drop entered dragged=\(dragged) target=\(targetID)")
+        }
     }
 
     func performDrop(info: DropInfo) -> Bool {
+        if let dragged = state.draggedAppID {
+            LaunchLog.line("folder drop perform dragged=\(dragged) target=\(targetID)")
+            state.dropApp(dragged, on: targetID)
+        }
         state.draggedAppID = nil
         return true
     }
 }
-

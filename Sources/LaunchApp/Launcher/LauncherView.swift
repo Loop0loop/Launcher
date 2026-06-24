@@ -65,11 +65,7 @@ struct LauncherView: View {
         VStack(spacing: 0) {
             Spacer(minLength: layout.safeTopInset)
 
-            LauncherSearchField(
-                query: $state.query,
-                isVisible: state.launcherVisible,
-                onFieldReady: { state.searchField = $0 }
-            )
+            LauncherSearchField(query: $state.query, state: state)
                 .frame(height: layout.searchBarHeight)
 
             Spacer(minLength: layout.searchToGridGap)
@@ -150,51 +146,18 @@ struct PagedGridView: View {
 
 struct LauncherSearchField: View {
     @Binding var query: String
-    let isVisible: Bool
-    var onFieldReady: (NSTextField) -> Void
+    @ObservedObject var state: AppState
 
     var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 14, weight: .medium))
-                .foregroundStyle(.white.opacity(0.7))
-                .allowsHitTesting(false)
-
-            LauncherNativeSearchField(
-                text: $query,
-                requestFocus: isVisible,
-                onFieldReady: onFieldReady
-            )
-            .frame(minWidth: 180, maxWidth: .infinity, minHeight: LaunchConstants.Launcher.searchHeight)
-
-            if !query.isEmpty {
-                Button { query = "" } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.white.opacity(0.55))
+        LauncherSearchBarRepresentable(text: $query) { bar in
+            state.registerSearchBar(bar)
+            if state.shouldFocusSearchOnShow {
+                DispatchQueue.main.async {
+                    state.focusSearchField()
                 }
-                .buttonStyle(.plain)
             }
         }
-        .padding(.horizontal, LaunchConstants.Launcher.searchHorizontalPadding)
         .frame(width: LaunchConstants.Launcher.searchWidth, height: LaunchConstants.Launcher.searchHeight)
-        .background {
-            Capsule()
-                .fill(.white.opacity(0.14))
-                .background(.ultraThinMaterial, in: Capsule())
-                .overlay {
-                    Capsule()
-                        .strokeBorder(
-                            LinearGradient(
-                                colors: [.white.opacity(0.45), .white.opacity(0.12)],
-                                startPoint: .top,
-                                endPoint: .bottom
-                            ),
-                            lineWidth: 0.5
-                        )
-                }
-                .allowsHitTesting(false)
-        }
         .frame(maxWidth: .infinity)
     }
 }
@@ -360,6 +323,7 @@ struct FolderOverlay: View {
     let folder: LaunchFolder
     @ObservedObject var state: AppState
     @State private var isVisible = false
+    @State private var folderName = ""
 
     private var columns: [GridItem] {
         Array(
@@ -373,15 +337,20 @@ struct FolderOverlay: View {
             .scaleEffect(isVisible ? 1 : LaunchConstants.Launcher.folderEntranceScale)
             .opacity(isVisible ? 1 : 0)
             .onAppear {
+                folderName = folder.name
                 withAnimation(LaunchConstants.Animation.spring) {
                     isVisible = true
                 }
             }
             .onChange(of: folder.id) { _, _ in
+                folderName = folder.name
                 isVisible = false
                 withAnimation(LaunchConstants.Animation.spring) {
                     isVisible = true
                 }
+            }
+            .onChange(of: folder.name) { _, name in
+                folderName = name
             }
     }
 
@@ -398,13 +367,13 @@ struct FolderOverlay: View {
 
     private var folderPanel: some View {
         VStack(spacing: LaunchConstants.FolderOverlay.spacing) {
-            Text(folder.name)
-                .font(.system(size: LaunchConstants.FolderOverlay.titleFontSize, weight: .semibold))
-                .launchLabelStyle()
+            FolderTitleField(name: $folderName) {
+                state.renameFolder(folder.id, to: folderName)
+            }
 
             LazyVGrid(columns: columns, spacing: LaunchConstants.FolderOverlay.spacing) {
                 ForEach(state.apps(in: folder)) { app in
-                    FolderOverlayAppIcon(app: app, state: state)
+                    FolderOverlayAppIcon(app: app, folderID: folder.id, state: state)
                 }
             }
             .frame(minHeight: LaunchConstants.FolderOverlay.minGridHeight, alignment: .top)
@@ -414,8 +383,27 @@ struct FolderOverlay: View {
     }
 }
 
+struct FolderTitleField: View {
+    @Binding var name: String
+    let commit: () -> Void
+
+    var body: some View {
+        TextField("", text: $name, onCommit: commit)
+            .textFieldStyle(.plain)
+            .font(.system(size: LaunchConstants.FolderOverlay.titleFontSize, weight: .semibold))
+            .multilineTextAlignment(.center)
+            .foregroundStyle(.white.opacity(0.95))
+            .padding(.horizontal, 16)
+            .padding(.vertical, 7)
+            .frame(maxWidth: LaunchConstants.FolderOverlay.width - 120)
+            .launchGlass(in: Capsule(), interactive: true)
+            .onSubmit(commit)
+    }
+}
+
 struct FolderOverlayAppIcon: View {
     let app: LaunchApp
+    let folderID: String
     @ObservedObject var state: AppState
     @Environment(\.iconCache) private var iconCache
 
@@ -447,14 +435,15 @@ struct FolderOverlayAppIcon: View {
         }
         .contextMenu {
             launcherAppContextMenu(app: app, state: state)
+            Divider()
+            Button(LaunchConstants.Menu.removeFromFolder) {
+                state.removeApp(app.id, fromFolder: folderID)
+            }
         }
         .onDrop(of: [UTType.text], delegate: AppDropDelegate(targetID: app.id, state: state))
     }
 }
 
 private func dockItemProvider(for app: LaunchApp) -> NSItemProvider {
-    let provider = NSItemProvider(contentsOf: URL(fileURLWithPath: app.path))
-        ?? NSItemProvider()
-    provider.registerObject(app.id as NSString, visibility: .all)
-    return provider
+    NSItemProvider(object: app.id as NSString)
 }
