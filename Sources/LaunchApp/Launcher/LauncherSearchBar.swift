@@ -111,10 +111,10 @@ final class LauncherSearchBarView: NSView {
             let glass = NSGlassEffectView()
             glass.style = .clear
             glass.cornerRadius = LaunchConstants.Launcher.searchHeight / 2
-            // Only tint when asked; a clear-white tint still frosts the glass toward grey.
-            if LaunchConstants.Glass.searchBarWhiteFillOpacity > 0 {
-                glass.tintColor = NSColor.white.withAlphaComponent(LaunchConstants.Glass.searchBarWhiteFillOpacity)
-            }
+            // Fixed blue tint so the capsule reads as the image's blue glass regardless of
+            // the grey launcher frost behind it.
+            glass.tintColor = LaunchConstants.Glass.searchBarTintColor
+                .withAlphaComponent(LaunchConstants.Glass.searchBarTintOpacity)
             glass.autoresizingMask = [.width, .height]
             glass.frame = container.bounds
             container.addSubview(glass)
@@ -135,7 +135,7 @@ final class LauncherSearchBarView: NSView {
 
             whiteTintView.wantsLayer = true
             whiteTintView.layer?.cornerRadius = LaunchConstants.Launcher.searchHeight / 2
-            whiteTintView.layer?.backgroundColor = NSColor.white.withAlphaComponent(LaunchConstants.Glass.searchBarWhiteFillOpacity).cgColor
+            whiteTintView.layer?.backgroundColor = LaunchConstants.Glass.searchBarTintColor.withAlphaComponent(LaunchConstants.Glass.searchBarTintOpacity).cgColor
             whiteTintView.autoresizingMask = [.width, .height]
             whiteTintView.frame = container.bounds
             container.addSubview(whiteTintView)

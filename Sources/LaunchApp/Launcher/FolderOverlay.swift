@@ -30,7 +30,7 @@ struct FolderOverlay: View {
             .background(shape.fill(.white.opacity(LaunchConstants.Glass.folderBackgroundOpacity)))
             .overlay(shape.fill(.white.opacity(LaunchConstants.Glass.folderSheenOpacity)))
             .overlay(shape.strokeBorder(.white.opacity(LaunchConstants.Glass.folderStrokeOpacity), lineWidth: 1.0))
-            .clipShape(shape)
+            // No clipShape: a dragged icon must stay visible as it's pulled past the panel edge.
             .tahoeFolderPanelChrome()
     }
 

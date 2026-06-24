@@ -92,11 +92,13 @@ enum LaunchConstants {
         static let sheenOpacity: CGFloat = 0.04
         static let searchBarShadowOpacity: CGFloat = 0.035
         static let searchBarShadowRadius: CGFloat = 8
-        // 투명 유리: .clear 글래스 위에 흰색 틴트/광택을 덧칠하면 milky/회색 카드가 됨.
-        // 이미지처럼 배경이 그대로 비치게 하려면 fill/sheen 0, 외곽 링(stroke)만 남긴다.
-        static let searchBarWhiteFillOpacity: CGFloat = 0.0
-        static let searchBarStrokeOpacity: CGFloat = 0.58
-        static let searchBarSheenOpacity: CGFloat = 0.0
+        // 파란 유리 캡슐 (이미지 매칭). 런처 배경 프로스트가 회색이라 흰 틴트는 회색으로
+        // 보인다 → 글래스에 고정 파란(페리윙클) 틴트를 입혀 벽지와 무관하게 파랗게.
+        static let searchBarTintColor = NSColor(srgbRed: 0.34, green: 0.38, blue: 0.92, alpha: 1.0)
+        static let searchBarTintOpacity: CGFloat = 0.28
+        static let searchBarWhiteFillOpacity: CGFloat = 0.12   // 폴백(<macOS 26) 경로용
+        static let searchBarStrokeOpacity: CGFloat = 0.70
+        static let searchBarSheenOpacity: CGFloat = 0.03
 
         // 1. 열린 폴더 패널 (Opened Folder Panel)
         static let folderMaterial: Material = .ultraThinMaterial           // 매우 얇고 투명한 재질
