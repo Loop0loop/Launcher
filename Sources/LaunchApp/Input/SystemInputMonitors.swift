@@ -9,6 +9,7 @@ final class GlobalHotKeyAdapter {
     private var actions: [UInt32: @MainActor () -> Void] = [:]
 
     func start(
+        f4Enabled: Bool,
         toggleAction: @escaping @MainActor () -> Void,
         f4Action: @escaping @MainActor () -> Void
     ) -> (toggle: Bool, f4: Bool) {
@@ -37,12 +38,14 @@ final class GlobalHotKeyAdapter {
             modifiers: LaunchConstants.HotKey.toggleModifiers,
             action: toggleAction
         )
-        let f4Registered = register(
-            id: LaunchConstants.HotKey.f4ID,
-            LaunchConstants.HotKey.f4KeyCode,
-            modifiers: LaunchConstants.HotKey.f4Modifiers,
-            action: f4Action
-        )
+        let f4Registered = f4Enabled
+            ? register(
+                id: LaunchConstants.HotKey.f4ID,
+                LaunchConstants.HotKey.f4KeyCode,
+                modifiers: LaunchConstants.HotKey.f4Modifiers,
+                action: f4Action
+            )
+            : false
 
         return (toggleRegistered, f4Registered)
     }
@@ -111,12 +114,15 @@ final class GlobalHotKeyAdapter {
 final class HotCornerMonitor {
     private var timer: Timer?
     private var lastTrigger = Date.distantPast
+    private var corner = "Disabled"
 
-    func start(action: @escaping @MainActor () -> Void) {
+    func start(corner: String, action: @escaping @MainActor () -> Void) {
         stop()
+        guard corner != "Disabled" else { return }
+        self.corner = corner
         timer = Timer.scheduledTimer(withTimeInterval: LaunchConstants.HotCorner.pollInterval, repeats: true) { [weak self] _ in
             Task { @MainActor in
-                guard let self, self.isPointerInTopLeftCorner(), self.canTrigger else { return }
+                guard let self, self.isPointerInConfiguredCorner(), self.canTrigger else { return }
                 self.lastTrigger = Date()
                 action()
             }
@@ -132,14 +138,27 @@ final class HotCornerMonitor {
         Date().timeIntervalSince(lastTrigger) >= LaunchConstants.HotCorner.cooldown
     }
 
-    private func isPointerInTopLeftCorner() -> Bool {
+    private func isPointerInConfiguredCorner() -> Bool {
         let location = NSEvent.mouseLocation
         return NSScreen.screens.contains { screen in
             let frame = screen.frame
-            return location.x >= frame.minX
-                && location.x <= frame.minX + LaunchConstants.HotCorner.activationSize
-                && location.y <= frame.maxY
-                && location.y >= frame.maxY - LaunchConstants.HotCorner.activationSize
+            let size = LaunchConstants.HotCorner.activationSize
+            switch corner {
+            case "Top Left":
+                return location.x >= frame.minX && location.x <= frame.minX + size
+                    && location.y <= frame.maxY && location.y >= frame.maxY - size
+            case "Top Right":
+                return location.x <= frame.maxX && location.x >= frame.maxX - size
+                    && location.y <= frame.maxY && location.y >= frame.maxY - size
+            case "Bottom Left":
+                return location.x >= frame.minX && location.x <= frame.minX + size
+                    && location.y >= frame.minY && location.y <= frame.minY + size
+            case "Bottom Right":
+                return location.x <= frame.maxX && location.x >= frame.maxX - size
+                    && location.y >= frame.minY && location.y <= frame.minY + size
+            default:
+                return false
+            }
         }
     }
 }

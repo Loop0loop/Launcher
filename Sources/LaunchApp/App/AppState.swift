@@ -23,13 +23,22 @@ final class AppState: ObservableObject {
         didSet { UserDefaults.standard.set(hotkeyDisplay, forKey: "settings.hotkeyDisplay") }
     }
     @Published var systemF4KeyEnabled = (UserDefaults.standard.object(forKey: "settings.systemF4KeyEnabled") as? Bool) ?? true {
-        didSet { UserDefaults.standard.set(systemF4KeyEnabled, forKey: "settings.systemF4KeyEnabled") }
+        didSet {
+            UserDefaults.standard.set(systemF4KeyEnabled, forKey: "settings.systemF4KeyEnabled")
+            actions.applyInputSettings()
+        }
     }
     @Published var trackpadSetting = UserDefaults.standard.string(forKey: "settings.trackpadSetting") ?? "Pinch with 4 or 5 fingers" {
-        didSet { UserDefaults.standard.set(trackpadSetting, forKey: "settings.trackpadSetting") }
+        didSet {
+            UserDefaults.standard.set(trackpadSetting, forKey: "settings.trackpadSetting")
+            actions.applyInputSettings()
+        }
     }
     @Published var hotCornerSetting = UserDefaults.standard.string(forKey: "settings.hotCornerSetting") ?? "Top Left" {
-        didSet { UserDefaults.standard.set(hotCornerSetting, forKey: "settings.hotCornerSetting") }
+        didSet {
+            UserDefaults.standard.set(hotCornerSetting, forKey: "settings.hotCornerSetting")
+            actions.applyInputSettings()
+        }
     }
     @Published var loginItemError: String?
     @Published var accessibilityTrusted = false
@@ -75,6 +84,20 @@ final class AppState: ObservableObject {
             guard oldValue != showMenuBarIcon else { return }
             UserDefaults.standard.set(showMenuBarIcon, forKey: LaunchConstants.Storage.showMenuBarIconKey)
             actions.applyMenuBarVisibility()
+        }
+    }
+    @Published var showMenuBarInLauncher = (UserDefaults.standard.object(forKey: LaunchConstants.Storage.showMenuBarInLauncherKey) as? Bool) ?? false {
+        didSet {
+            guard oldValue != showMenuBarInLauncher else { return }
+            UserDefaults.standard.set(showMenuBarInLauncher, forKey: LaunchConstants.Storage.showMenuBarInLauncherKey)
+            actions.applyWindowBrowsingMode()
+        }
+    }
+    @Published var showDockInLauncher = (UserDefaults.standard.object(forKey: LaunchConstants.Storage.showDockInLauncherKey) as? Bool) ?? false {
+        didSet {
+            guard oldValue != showDockInLauncher else { return }
+            UserDefaults.standard.set(showDockInLauncher, forKey: LaunchConstants.Storage.showDockInLauncherKey)
+            actions.applyWindowBrowsingMode()
         }
     }
     @Published var appIcon = AppIconOption.load() {

@@ -115,7 +115,7 @@ extension AppDelegate {
     }
 
     private func handleSortAppsByName() {
+        state.sortMode = .name
         state.applyNameSort()
     }
 }
-

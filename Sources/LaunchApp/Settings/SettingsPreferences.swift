@@ -26,8 +26,19 @@ enum AppIconOption: String, CaseIterable, Identifiable {
     }
 
     func image() -> NSImage? {
-        guard let url = Bundle.main.url(forResource: resourceName, withExtension: "png") else { return nil }
-        return NSImage(contentsOf: url)
+        if let url = Bundle.main.url(forResource: resourceName, withExtension: "png"),
+           let image = NSImage(contentsOf: url) {
+            return image
+        }
+
+        switch self {
+        case .blue:
+            return generatedIcon(background: NSColor.systemBlue, symbol: "circle.grid.3x3.fill")
+        case .rocket:
+            return generatedIcon(background: NSColor.darkGray, symbol: "rocket.fill")
+        case .color, .mono:
+            return nil
+        }
     }
 
     static func load() -> AppIconOption {
@@ -37,6 +48,26 @@ enum AppIconOption: String, CaseIterable, Identifiable {
     func save() {
         UserDefaults.standard.set(rawValue, forKey: LaunchConstants.Storage.appIconKey)
     }
+
+    private func generatedIcon(background: NSColor, symbol: String) -> NSImage {
+        let size = NSSize(width: 512, height: 512)
+        let image = NSImage(size: size)
+        image.lockFocus()
+        defer { image.unlockFocus() }
+
+        let rect = NSRect(origin: .zero, size: size)
+        background.setFill()
+        NSBezierPath(roundedRect: rect.insetBy(dx: 42, dy: 42), xRadius: 92, yRadius: 92).fill()
+
+        if let symbolImage = NSImage(systemSymbolName: symbol, accessibilityDescription: nil) {
+            symbolImage.lockFocus()
+            NSColor.white.set()
+            rect.fill(using: .sourceAtop)
+            symbolImage.unlockFocus()
+            symbolImage.draw(in: rect.insetBy(dx: 150, dy: 150), from: .zero, operation: .sourceOver, fraction: 1)
+        }
+        return image
+    }
 }
 
 /// Grid ordering mode. `.name` keeps the grid alphabetized; `.custom` is manual drag order.
@@ -45,7 +76,7 @@ enum SortMode: String, CaseIterable, Identifiable {
     case name
 
     var id: String { rawValue }
-    var title: String { self == .custom ? "Custom" : "Name" }
+    var title: String { self == .custom ? Localized.t("사용자 지정", "Custom") : Localized.t("이름순", "Name") }
 
     static func load() -> SortMode {
         SortMode(rawValue: UserDefaults.standard.string(forKey: LaunchConstants.Storage.sortModeKey) ?? "") ?? .custom

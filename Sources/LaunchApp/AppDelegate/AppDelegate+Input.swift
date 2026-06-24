@@ -5,24 +5,43 @@ import SwiftUI
 extension AppDelegate {
     func startTrackpadMonitor() {
         LaunchLog.line("start trackpad monitor")
+        guard state.trackpadSetting != "Disabled" else {
+            trackpadMonitor.stop()
+            state.setTrackpadGateActive(false)
+            return
+        }
         trackpadMonitor.start { [weak self] isActive in
             LaunchLog.line("trackpad gate active=\(isActive)")
             self?.state.setTrackpadGateActive(isActive)
         } onIntent: { [weak self] intent in
             guard let self else { return }
-            LaunchLog.line("trackpad intent=\(intent)")
+            guard state.trackpadSetting != "Disabled" else { return }
+            let now = Date()
+            guard now >= trackpadIntentLockedUntil else {
+                LaunchLog.line("trackpad intent blocked cooldown")
+                return
+            }
             switch intent {
             case .open:
+                guard launcherLifecycle?.isVisible != true else { return }
+                trackpadIntentLockedUntil = now.addingTimeInterval(LaunchConstants.Multitouch.triggerCooldown)
+                LaunchLog.line("trackpad intent=\(intent)")
                 launcherLifecycle?.show()
             case .close:
                 if state.openFolder != nil {
+                    trackpadIntentLockedUntil = now.addingTimeInterval(LaunchConstants.Multitouch.triggerCooldown)
+                    LaunchLog.line("trackpad intent=\(intent)")
                     state.closeFolder()
                 } else if launcherLifecycle?.isVisible == true {
+                    trackpadIntentLockedUntil = now.addingTimeInterval(LaunchConstants.Multitouch.triggerCooldown)
+                    LaunchLog.line("trackpad intent=\(intent)")
                     launcherLifecycle?.hide()
                 }
             case .previousPage:
+                LaunchLog.line("trackpad intent=\(intent)")
                 changePageFromTrackpad(-1, ignoredLog: "trackpad previousPage ignored during drag")
             case .nextPage:
+                LaunchLog.line("trackpad intent=\(intent)")
                 changePageFromTrackpad(1, ignoredLog: "trackpad nextPage ignored during drag")
             }
         }
@@ -40,7 +59,7 @@ extension AppDelegate {
 
     func startGlobalHotKey() {
         LaunchLog.line("start global hotkey")
-        let status = globalHotKey.start {
+        let status = globalHotKey.start(f4Enabled: state.systemF4KeyEnabled) {
             [weak self] in
             LaunchLog.line("global hotkey toggle")
             self?.launcherLifecycle?.toggle()
@@ -55,9 +74,15 @@ extension AppDelegate {
     }
 
     func startHotCornerMonitor() {
-        hotCornerMonitor.start { [weak self] in
+        hotCornerMonitor.start(corner: state.hotCornerSetting) { [weak self] in
             self?.launcherLifecycle?.show()
         }
+    }
+
+    func applyInputSettings() {
+        startGlobalHotKey()
+        startHotCornerMonitor()
+        startTrackpadMonitor()
     }
 
     func startKeyMonitor() {
@@ -126,4 +151,3 @@ extension AppDelegate {
         }
     }
 }
-

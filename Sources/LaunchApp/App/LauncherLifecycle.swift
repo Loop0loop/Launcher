@@ -7,7 +7,6 @@ final class LauncherLifecycle {
     private let window: NSWindow
     private weak var mouseMonitor: LauncherMouseMonitor?
     private var previousApp: NSRunningApplication?
-    private var menuBarHidden = false
     private var phase: Phase = .hidden
     private var transitionToken = UUID()
 
@@ -76,6 +75,9 @@ final class LauncherLifecycle {
     func hide() {
         guard phase != .hidden, phase != .hiding, window.isVisible else { return }
         LaunchLog.line("lifecycle hide requested visible=\(state.launcherVisible)")
+        if let delegate = NSApp.delegate as? AppDelegate {
+            delegate.settingsWindow?.orderOut(nil)
+        }
         mouseMonitor?.setEnabled(false)
         state.cancelDrag()
 
@@ -87,7 +89,7 @@ final class LauncherLifecycle {
             guard let self, self.transitionToken == token else { return }
             self.phase = .hidden
             self.state.launcherVisible = false
-            self.setMenuBarHidden(false)
+            self.setSystemHidden(hideMenuBar: false, hideDock: false)
             self.window.orderOut(nil)
             self.resetPresentation()
             self.activatePreviousApp()
@@ -95,11 +97,14 @@ final class LauncherLifecycle {
     }
 
     func dismiss() {
+        if let delegate = NSApp.delegate as? AppDelegate {
+            delegate.settingsWindow?.orderOut(nil)
+        }
         transitionToken = UUID()
         phase = .hidden
         mouseMonitor?.setEnabled(false)
         state.cancelDrag()
-        setMenuBarHidden(false)
+        setSystemHidden(hideMenuBar: false, hideDock: false)
         state.launcherVisible = false
         window.orderOut(nil)
         resetPresentation()
@@ -117,7 +122,7 @@ final class LauncherLifecycle {
                 guard let self, self.transitionToken == token else { return }
                 self.phase = .hidden
                 self.state.launcherVisible = false
-                self.setMenuBarHidden(false)
+                self.setSystemHidden(hideMenuBar: false, hideDock: false)
                 self.window.orderOut(nil)
                 self.resetPresentation()
             }
@@ -132,15 +137,18 @@ final class LauncherLifecycle {
     }
 
     func applyWindowBrowsingMode() {
-        let screenFrame = NSScreen.main?.frame ?? window.frame
-        window.setFrame(state.windowBrowsingMode ? windowedFrame(in: screenFrame) : screenFrame, display: true)
+        if state.launcherVisible || window.isVisible {
+            applySystemVisibility()
+        }
+        let screen = NSScreen.main
+        let screenFrame = screen?.frame ?? window.frame
+        window.setFrame(state.windowBrowsingMode ? windowedFrame(in: screenFrame) : launcherFrame(in: screen), display: true)
         updateWindowChrome()
         preparePresentationLayer()
         guard state.launcherVisible || window.isVisible else {
             window.level = state.windowBrowsingMode ? .normal : .mainMenu
             return
         }
-        setMenuBarHidden(!state.windowBrowsingMode)
     }
 
     /// Apple AppKit pattern: `NSAnimationContext.runAnimationGroup` + `animator()` proxies.
@@ -200,6 +208,29 @@ final class LauncherLifecycle {
         )
     }
 
+    private func launcherFrame(in screen: NSScreen?) -> NSRect {
+        guard let screen else { return window.frame }
+        var frame = screen.frame
+        let visible = screen.visibleFrame
+
+        if state.showMenuBarInLauncher {
+            frame.size.height -= max(0, frame.maxY - visible.maxY)
+        }
+
+        if state.showDockInLauncher {
+            let leftInset = max(0, visible.minX - frame.minX)
+            let rightInset = max(0, frame.maxX - visible.maxX)
+            let bottomInset = max(0, visible.minY - frame.minY)
+
+            frame.origin.x += leftInset
+            frame.size.width -= leftInset + rightInset
+            frame.origin.y += bottomInset
+            frame.size.height -= bottomInset
+        }
+
+        return frame
+    }
+
     private func rememberPreviousApp() {
         let frontmost = NSWorkspace.shared.frontmostApplication
         if frontmost?.processIdentifier != NSRunningApplication.current.processIdentifier {
@@ -215,11 +246,21 @@ final class LauncherLifecycle {
         }
     }
 
-    private func setMenuBarHidden(_ hidden: Bool) {
-        if hidden != menuBarHidden {
-            menuBarHidden = hidden
-            NSApp.presentationOptions = hidden ? [.hideMenuBar, .hideDock] : []
+    private func applySystemVisibility() {
+        guard !state.windowBrowsingMode else {
+            setSystemHidden(hideMenuBar: false, hideDock: false)
+            return
         }
-        window.level = hidden ? .screenSaver : (state.windowBrowsingMode ? .normal : .mainMenu)
+        setSystemHidden(hideMenuBar: !state.showMenuBarInLauncher, hideDock: !state.showDockInLauncher)
+    }
+
+    private func setSystemHidden(hideMenuBar: Bool, hideDock: Bool) {
+        var options: NSApplication.PresentationOptions = []
+        if hideMenuBar { options.insert(.hideMenuBar) }
+        if hideDock { options.insert(.hideDock) }
+        if NSApp.presentationOptions != options {
+            NSApp.presentationOptions = options
+        }
+        window.level = hideMenuBar ? .screenSaver : (state.windowBrowsingMode ? .normal : .mainMenu)
     }
 }

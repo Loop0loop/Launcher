@@ -7,6 +7,7 @@ final class TrackpadGestureMonitor {
     private var monitors: [Any] = []
     private let pinchMonitor = PinchContactMonitor()
     private var lastScrollIntentTime: TimeInterval = 0
+    private var lastPinchIntentTime: TimeInterval = 0
     private var isScrollLocked = false
 
     func start(
@@ -19,7 +20,9 @@ final class TrackpadGestureMonitor {
         }
         LaunchLog.line("trackpad monitor start")
         pinchMonitor.start { intent in
-            LaunchLog.line("private pinch intent=\(intent)")
+            let now = Date().timeIntervalSinceReferenceDate
+            guard now - self.lastPinchIntentTime >= LaunchConstants.Multitouch.triggerCooldown else { return }
+            self.lastPinchIntentTime = now
             onIntent(intent)
         }
         onGateStatus(pinchMonitor.isReady)
@@ -103,9 +106,19 @@ final class TrackpadGestureMonitor {
             LaunchLog.line("global trackpad monitor installed")
         }
     }
+
+    func stop() {
+        for monitor in monitors {
+            NSEvent.removeMonitor(monitor)
+        }
+        monitors = []
+        lastScrollIntentTime = 0
+        lastPinchIntentTime = 0
+        isScrollLocked = false
+        pinchMonitor.stop()
+    }
 }
 
-@MainActor
 final class PinchContactMonitor {
     fileprivate struct MTPoint {
         var x: Float
@@ -148,18 +161,26 @@ final class PinchContactMonitor {
     typealias MTDeviceStart = @convention(c) (MTDeviceRef, Int32) -> Void
     typealias ContactCallback = @convention(c) (Int32, UnsafeMutableRawPointer?, Int32, Double, Int32) -> Int32
 
+    private let lock = NSLock()
     private var handle: UnsafeMutableRawPointer?
     private var devices: [MTDeviceRef] = []
     private var initialRadius: Double?
     private var lastIntentTime: Double = 0
     private var onPinch: (@MainActor (TrackpadIntent) -> Void)?
-    fileprivate static weak var current: PinchContactMonitor?
+    nonisolated(unsafe) fileprivate static var current: PinchContactMonitor?
 
-    private(set) var isReady = false
+    private var _isReady = false
+    var isReady: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return _isReady
+    }
 
     func start(onPinch: @escaping @MainActor (TrackpadIntent) -> Void) {
-        guard !isReady else { return }
+        lock.lock()
+        defer { lock.unlock() }
         self.onPinch = onPinch
+        guard !_isReady else { return }
         handle = dlopen(LaunchConstants.Multitouch.frameworkPath, RTLD_NOW)
         guard let handle,
               let createListSymbol = dlsym(handle, LaunchConstants.Multitouch.createListSymbol),
@@ -174,7 +195,7 @@ final class PinchContactMonitor {
         let startDevice = unsafeBitCast(startSymbol, to: MTDeviceStart.self)
         let deviceList = createList().takeRetainedValue()
 
-        Self.current = self
+        PinchContactMonitor.current = self
         for index in 0..<CFArrayGetCount(deviceList) {
             guard let rawDevice = CFArrayGetValueAtIndex(deviceList, index) else { continue }
             let device = OpaquePointer(rawDevice)
@@ -183,16 +204,24 @@ final class PinchContactMonitor {
             startDevice(device, 0)
         }
 
-        isReady = !devices.isEmpty
+        _isReady = !devices.isEmpty
         LaunchLog.line("private multitouch devices=\(devices.count)")
     }
 
+    func stop() {
+        lock.lock()
+        defer { lock.unlock() }
+        onPinch = nil
+        initialRadius = nil
+        lastIntentTime = 0
+    }
+
     fileprivate func process(touches: [TouchPoint], timestamp: Double) {
+        lock.lock()
+        defer { lock.unlock() }
+
         let requiredCount = LaunchConstants.Multitouch.gestureFingerCount
         guard touches.count >= requiredCount else {
-            if initialRadius != nil {
-                LaunchLog.line("private pinch reset touches=\(touches.count)")
-            }
             initialRadius = nil
             return
         }
@@ -206,7 +235,6 @@ final class PinchContactMonitor {
 
         guard let initialRadius, initialRadius > 0 else {
             self.initialRadius = radius
-            LaunchLog.line("private pinch baseline radius=\(radius)")
             return
         }
 
@@ -219,16 +247,17 @@ final class PinchContactMonitor {
 
         lastIntentTime = timestamp
         self.initialRadius = radius
-        LaunchLog.line("private pinch radius=\(radius) intent=\(intent)")
-        onPinch?(intent)
+
+        let callback = onPinch
+        Task { @MainActor in
+            callback?(intent)
+        }
     }
 }
 
 private let contactCallback: PinchContactMonitor.ContactCallback = { _, touchesRawPointer, contactCount, timestamp, _ in
     guard let touchesRawPointer, contactCount > 0 else {
-        Task { @MainActor in
-            PinchContactMonitor.current?.process(touches: [], timestamp: timestamp)
-        }
+        PinchContactMonitor.current?.process(touches: [], timestamp: timestamp)
         return 0
     }
 
@@ -241,8 +270,6 @@ private let contactCallback: PinchContactMonitor.ContactCallback = { _, touchesR
         )
     }
 
-    Task { @MainActor in
-        PinchContactMonitor.current?.process(touches: touches, timestamp: timestamp)
-    }
+    PinchContactMonitor.current?.process(touches: touches, timestamp: timestamp)
     return 0
 }

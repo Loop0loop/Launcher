@@ -117,7 +117,7 @@ struct LauncherDismissLayer: View {
     let action: () -> Void
 
     var body: some View {
-        Color.clear
+        Color.black.opacity(0.0001)
             .contentShape(Rectangle())
             .onTapGesture(perform: action)
     }

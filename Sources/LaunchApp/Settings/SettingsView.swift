@@ -100,6 +100,8 @@ struct SettingsView: View {
 
             SettingsSection(title: LaunchConstants.Settings.appearanceSection) {
                 SettingsToggleRow(title: LaunchConstants.Settings.showMenuBarIcon, isOn: $state.showMenuBarIcon)
+                SettingsToggleRow(title: LaunchConstants.Settings.showMenuBarInLauncher, isOn: $state.showMenuBarInLauncher)
+                SettingsToggleRow(title: LaunchConstants.Settings.showDockInLauncher, isOn: $state.showDockInLauncher)
                 SettingsRow(title: LaunchConstants.Settings.appIcon) {
                     AppIconPicker(selection: $state.appIcon)
                 }

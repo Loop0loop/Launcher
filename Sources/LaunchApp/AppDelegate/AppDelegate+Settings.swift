@@ -18,7 +18,7 @@ extension AppDelegate {
                     width: LaunchConstants.Settings.width,
                     height: LaunchConstants.Settings.height
                 ),
-                styleMask: [.titled, .closable, .fullSizeContentView, .utilityWindow, .nonactivatingPanel],
+                styleMask: [.titled, .closable, .fullSizeContentView, .utilityWindow],
                 backing: .buffered,
                 defer: false
             )
@@ -28,7 +28,8 @@ extension AppDelegate {
             window.isMovableByWindowBackground = true
             window.hasShadow = true
             window.isFloatingPanel = true
-            window.level = .statusBar
+            window.becomesKeyOnlyIfNeeded = false
+            window.level = .screenSaver
             let hosting = NSHostingView(rootView: SettingsView(state: state))
             hosting.safeAreaRegions = []
             window.contentView = hosting
@@ -36,12 +37,6 @@ extension AppDelegate {
         }
 
         settingsWindow?.center()
-
-        if let launcherWindow = self.window, let settings = settingsWindow {
-            if settings.parent == nil {
-                launcherWindow.addChildWindow(settings, ordered: .above)
-            }
-        }
 
         settingsWindow?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)

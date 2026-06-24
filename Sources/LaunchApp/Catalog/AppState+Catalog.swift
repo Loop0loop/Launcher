@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import LaunchCore
 
@@ -15,8 +16,13 @@ extension AppState {
         openFolder = openFolder.flatMap { open in folders.first { $0.id == open.id } }
         order = cleanup.order
         LayoutStore.saveFolders(folders)
-        saveOrder()
+        if sortMode == .name {
+            applyNameSort()
+        } else {
+            saveOrder()
+        }
         ensureSelection()
+        (NSApp.delegate as? AppDelegate)?.iconCache.preload(apps: apps)
     }
 
     func appByID(_ id: String) -> LaunchApp? {

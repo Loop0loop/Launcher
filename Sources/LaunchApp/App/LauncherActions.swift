@@ -13,4 +13,5 @@ struct LauncherActions {
     var applyWindowBrowsingMode: () -> Void = {}
     var applyMenuBarVisibility: () -> Void = {}
     var applyAppIcon: () -> Void = {}
+    var applyInputSettings: () -> Void = {}
 }

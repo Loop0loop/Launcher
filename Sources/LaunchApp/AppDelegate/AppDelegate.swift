@@ -15,6 +15,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     var statusItem: NSStatusItem?
     var keyMonitor: Any?
     var statusRightClickMonitor: Any?
+    var trackpadIntentLockedUntil = Date.distantPast
     lazy var statusMenu: NSMenu = makeStatusMenu()
 
     public override init() {
@@ -78,7 +79,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
             chooseAppSource: { [weak self] in self?.chooseAppSource() },
             applyWindowBrowsingMode: { [weak self] in self?.launcherLifecycle?.applyWindowBrowsingMode() },
             applyMenuBarVisibility: { [weak self] in self?.applyMenuBarVisibility() },
-            applyAppIcon: { [weak self] in self?.applyAppIcon() }
+            applyAppIcon: { [weak self] in self?.applyAppIcon() },
+            applyInputSettings: { [weak self] in self?.applyInputSettings() }
         )
     }
 }

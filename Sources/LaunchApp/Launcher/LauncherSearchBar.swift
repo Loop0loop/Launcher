@@ -8,6 +8,7 @@ final class LauncherSearchBarView: NSView {
     private let clearButton = NSButton()
     private let optionButton = NSButton()
     private let contentView = NSView()
+    private let sheenView = NSView()
     private var chromeView: NSView?
     private var glassChromeView: NSView?
     private var visualChromeView: NSVisualEffectView?
@@ -88,24 +89,48 @@ final class LauncherSearchBarView: NSView {
         layer?.cornerRadius = LaunchConstants.Launcher.searchHeight / 2
         layer?.masksToBounds = false
 
-        let bgView = NSView()
-        bgView.wantsLayer = true
-        bgView.layer?.cornerRadius = LaunchConstants.Launcher.searchHeight / 2
-        bgView.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.06).cgColor
-        bgView.layer?.borderWidth = 0
-        bgView.layer?.borderColor = NSColor.clear.cgColor
-        bgView.autoresizingMask = [.width, .height]
-        bgView.frame = bounds
+        let container = NSView()
+        container.wantsLayer = true
+        container.layer?.cornerRadius = LaunchConstants.Launcher.searchHeight / 2
+        container.layer?.masksToBounds = false
+        container.layer?.backgroundColor = NSColor.clear.cgColor
+        container.autoresizingMask = [.width, .height]
+        container.frame = bounds
 
         // 그림자 설정 (테두리 없는 부드러운 그림자)
-        bgView.layer?.shadowColor = NSColor.black.cgColor
-        bgView.layer?.shadowOpacity = 0.08
-        bgView.layer?.shadowRadius = 8
-        bgView.layer?.shadowOffset = NSSize(width: 0, height: -2)
+        container.layer?.shadowColor = NSColor.black.cgColor
+        container.layer?.shadowOpacity = 0.08
+        container.layer?.shadowRadius = 8
+        container.layer?.shadowOffset = NSSize(width: 0, height: -2)
 
-        addSubview(bgView)
+        let visualVEV = NSVisualEffectView()
+        visualVEV.material = .headerView
+        visualVEV.blendingMode = .behindWindow
+        visualVEV.state = .active
+        visualVEV.wantsLayer = true
+        visualVEV.layer?.cornerRadius = LaunchConstants.Launcher.searchHeight / 2
+        visualVEV.layer?.masksToBounds = true
+        visualVEV.layer?.borderWidth = 0.6
+        visualVEV.layer?.borderColor = NSColor.white.withAlphaComponent(0.15).cgColor
+        visualVEV.autoresizingMask = [.width, .height]
+        visualVEV.frame = container.bounds
+
+        sheenView.wantsLayer = true
+        sheenView.layer?.cornerRadius = LaunchConstants.Launcher.searchHeight / 2
+        sheenView.layer?.backgroundColor = NSColor.white.withAlphaComponent(0.01).cgColor
+        sheenView.layer?.borderWidth = 0
+        sheenView.layer?.borderColor = NSColor.clear.cgColor
+        sheenView.autoresizingMask = [.width, .height]
+        sheenView.frame = visualVEV.bounds
+
+        visualVEV.addSubview(sheenView)
+        container.addSubview(visualVEV)
+
+        addSubview(container)
         addSubview(contentView)
-        chromeView = bgView
+
+        chromeView = container
+        visualChromeView = visualVEV
     }
 
     override func layout() {
@@ -161,7 +186,7 @@ final class LauncherSearchBarView: NSView {
     }
 
     func setActive(_ active: Bool) {
-        chromeView?.layer?.backgroundColor = NSColor.white.withAlphaComponent(active ? 0.12 : 0.06).cgColor
+        sheenView.layer?.backgroundColor = NSColor.white.withAlphaComponent(active ? 0.06 : 0.01).cgColor
     }
 
     func updateText(_ text: String) {

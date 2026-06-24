@@ -61,6 +61,8 @@ enum LaunchConstants {
         static var displayMode: String { Localized.t("표시 모드", "Display Mode") }
         static var windowBrowsingMode: String { Localized.t("창 탐색 모드", "Window Browsing Mode") }
         static var showMenuBarIcon: String { Localized.t("메뉴 막대 아이콘 표시", "Show Menu Bar Icon") }
+        static var showMenuBarInLauncher: String { Localized.t("런처에서 메뉴 막대 표시", "Show Menu Bar in Launcher") }
+        static var showDockInLauncher: String { Localized.t("런처에서 Dock/Finder 표시", "Show Dock/Finder in Launcher") }
         static var appIcon: String { Localized.t("앱 아이콘", "App Icon") }
         static var sortBy: String { Localized.t("정렬 기준", "Sort By") }
 
@@ -101,13 +103,15 @@ enum LaunchConstants {
         static let displayModeKey = "displayMode"
         static let windowBrowsingModeKey = "windowBrowsingMode"
         static let showMenuBarIconKey = "showMenuBarIcon"
+        static let showMenuBarInLauncherKey = "showMenuBarInLauncher"
+        static let showDockInLauncherKey = "showDockInLauncher"
         static let appIconKey = "appIcon"
         static let sortModeKey = "sortMode"
         static let appLanguageKey = "appLanguage"
     }
 
     enum Launcher {
-        static var searchPlaceholder: String { Localized.t("검색", "Search") }
+        static var searchPlaceholder: String { Localized.t("App 검색", "Search Applications") }
         static let pageSize = 35
         static let columns = 7
         static let rows = 5
@@ -130,7 +134,7 @@ enum LaunchConstants {
         static let minIconSize: CGFloat = 80
         static let maxIconSize: CGFloat = 112
 
-        static let searchWidth: CGFloat = 300
+        static let searchWidth: CGFloat = 380
         static let searchHeight: CGFloat = 36
         static let searchHorizontalPadding: CGFloat = 14
         static let searchFontSize: CGFloat = 15
