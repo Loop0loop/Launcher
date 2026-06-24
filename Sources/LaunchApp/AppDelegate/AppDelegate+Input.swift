@@ -67,6 +67,14 @@ extension AppDelegate {
         }
     }
 
+    /// True while any text field other than the search bar is being edited (the folder title).
+    /// The field editor becomes the panel's first responder during editing.
+    private var isTextFieldEditing: Bool {
+        guard let responder = window?.firstResponder else { return false }
+        if let textView = responder as? NSTextView, textView.isFieldEditor { return true }
+        return responder is NSTextField
+    }
+
     func handleLauncherKey(_ event: NSEvent) -> NSEvent? {
         if state.isSearchFieldFocused() {
             switch event.keyCode {
@@ -79,6 +87,12 @@ extension AppDelegate {
             default:
                 return event
             }
+        }
+
+        // Editing another text field (e.g. the folder title) — let the field handle every
+        // key (arrows move the cursor) instead of driving the launcher grid behind it.
+        if isTextFieldEditing {
+            return event
         }
 
         switch event.keyCode {
