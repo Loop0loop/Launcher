@@ -103,6 +103,8 @@ private struct FolderTitleNSField: NSViewRepresentable {
         field.isEditable = true
         field.isSelectable = true
         field.isEnabled = true
+        field.isAutomaticTextCompletionEnabled = false
+        field.allowsCharacterPickerTouchBarItem = false
         field.focusRingType = .none
         field.alignment = .center
         field.font = .systemFont(ofSize: LaunchConstants.FolderOverlay.titleFontSize, weight: .semibold)
@@ -138,6 +140,16 @@ private struct FolderTitleNSField: NSViewRepresentable {
             parent.commit()
         }
 
+        func control(
+            _ control: NSControl,
+            textView: NSTextView,
+            completions words: [String],
+            forPartialWordRange charRange: NSRange,
+            indexOfSelectedItem index: UnsafeMutablePointer<Int>
+        ) -> [String] {
+            []
+        }
+
         @MainActor @objc func commitFromAction(_ sender: NSTextField) {
             parent.name = sender.stringValue
             parent.commit()
@@ -169,7 +181,7 @@ struct FolderOverlayAppIcon: View {
 
     var body: some View {
         VStack(spacing: LaunchConstants.Icon.spacing) {
-            LoadedIcon(app: app, displaySize: LaunchConstants.FolderOverlay.maxIconSize)
+            LoadedIcon(app: app, displaySize: LaunchConstants.FolderOverlay.maxIconSize, loadsImage: state.launcherVisible)
                 .shadow(color: .black.opacity(0.28), radius: 1.5, y: 1)
 
             Text(app.name)

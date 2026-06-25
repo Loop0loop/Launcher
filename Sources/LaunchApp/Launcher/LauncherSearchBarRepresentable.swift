@@ -68,6 +68,16 @@ struct LauncherSearchBarRepresentable: NSViewRepresentable {
             guard let field = notification.object as? NSTextField else { return }
             text = field.stringValue
         }
+
+        func control(
+            _ control: NSControl,
+            textView: NSTextView,
+            completions words: [String],
+            forPartialWordRange charRange: NSRange,
+            indexOfSelectedItem index: UnsafeMutablePointer<Int>
+        ) -> [String] {
+            []
+        }
     }
 }
 

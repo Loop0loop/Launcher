@@ -9,11 +9,12 @@ struct LauncherItemView: View {
     var loadsIcons = true
 
     var body: some View {
+        let shouldLoadIcons = loadsIcons && state.launcherVisible
         switch item {
         case .app(let app):
-            AppIcon(app: app, state: state, layout: layout, pageOffset: pageOffset, loadsIcon: loadsIcons)
+            AppIcon(app: app, state: state, layout: layout, pageOffset: pageOffset, loadsIcon: shouldLoadIcons)
         case .folder(let folder, let apps):
-            FolderIcon(folder: folder, apps: apps, state: state, layout: layout, pageOffset: pageOffset, loadsIcons: loadsIcons)
+            FolderIcon(folder: folder, apps: apps, state: state, layout: layout, pageOffset: pageOffset, loadsIcons: shouldLoadIcons)
         }
     }
 }
@@ -88,7 +89,13 @@ struct FolderIcon: View {
                     spacing: miniGap
                 ) {
                     ForEach(apps.prefix(LaunchConstants.Icon.folderPreviewLimit)) { app in
-                        LoadedIcon(app: app, displaySize: miniIconSize, loadSize: miniIconSize, loadsImage: loadsIcons)
+                        LoadedIcon(
+                            app: app,
+                            displaySize: miniIconSize,
+                            loadSize: miniIconSize,
+                            loadsImage: loadsIcons,
+                            cachesImageInMemory: false
+                        )
                     }
                 }
             }

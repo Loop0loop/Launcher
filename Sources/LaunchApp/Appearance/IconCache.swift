@@ -1,4 +1,5 @@
 import AppKit
+import Dispatch
 import ImageIO
 import LaunchpadCore
 import SwiftUI
@@ -10,6 +11,7 @@ import SwiftUI
 final class IconCache: ObservableObject {
     private let memory = NSCache<NSString, NSImage>()
     private let diskDir: URL
+    private var memoryPressureSource: (any DispatchSourceMemoryPressure)?
 
     init() {
         memory.countLimit = 35
@@ -18,12 +20,25 @@ final class IconCache: ObservableObject {
         let dir = caches.appendingPathComponent("Launch/icons", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         self.diskDir = dir
+
+        let source = DispatchSource.makeMemoryPressureSource(eventMask: [.warning, .critical], queue: .main)
+        source.setEventHandler { [weak self] in self?.clear() }
+        source.resume()
+        memoryPressureSource = source
+    }
+
+    deinit {
+        memoryPressureSource?.cancel()
     }
 
     /// 메모리 히트는 즉시, 미스는 백그라운드 로드 후 반환. 호출한 뷰 하나만 갱신된다.
-    func loadImage(for app: LaunchApp, size: CGFloat = LaunchConstants.Launcher.maxIconSize) async -> NSImage? {
-        let key = app.path as NSString
-        if let cached = memory.object(forKey: key) {
+    func loadImage(
+        for app: LaunchApp,
+        size: CGFloat = LaunchConstants.Launcher.maxIconSize,
+        cacheInMemory: Bool = true
+    ) async -> NSImage? {
+        let key = Self.memoryKey(path: app.path, size: size)
+        if cacheInMemory, let cached = memory.object(forKey: key) {
             return cached
         }
         let cacheURL = diskDir.appendingPathComponent(Self.diskKey(path: app.path, size: size))
@@ -35,9 +50,11 @@ final class IconCache: ObservableObject {
                 return loaded
             }
         }.value
+        guard !Task.isCancelled else { return nil }
         guard let image else { return nil }
+        guard cacheInMemory else { return image }
         guard memory.object(forKey: key) == nil else { return memory.object(forKey: key) }
-        memory.setObject(image, forKey: key, cost: Self.byteCost(size: image.size))
+        memory.setObject(image, forKey: key, cost: Self.byteCost(image: image))
         return image
     }
 
@@ -50,7 +67,15 @@ final class IconCache: ObservableObject {
     private static func diskKey(path: String, size: CGFloat) -> String {
         var hash = 5381
         for byte in path.utf8 { hash = ((hash << 5) &+ hash) &+ Int(byte) }
-        return "\(Int(size))_\(hash)_\((path as NSString).lastPathComponent).png"
+        return "\(pixelSize(for: size))_\(hash)_\((path as NSString).lastPathComponent).png"
+    }
+
+    private static func memoryKey(path: String, size: CGFloat) -> NSString {
+        "\(pixelSize(for: size))_\(path)" as NSString
+    }
+
+    private nonisolated static func pixelSize(for size: CGFloat) -> Int {
+        Int(ceil(size * 2))
     }
 
     private nonisolated static func loadFromDisk(url: URL, size: CGFloat) -> NSImage? {
@@ -69,7 +94,7 @@ final class IconCache: ObservableObject {
     }
 
     private nonisolated static func thumbnail(from source: CGImageSource, size: CGFloat) -> NSImage? {
-        let px = Int(ceil(size * 2))
+        let px = pixelSize(for: size)
         let options: [CFString: Any] = [
             kCGImageSourceCreateThumbnailFromImageAlways: true,
             kCGImageSourceCreateThumbnailWithTransform: true,
@@ -80,7 +105,7 @@ final class IconCache: ObservableObject {
     }
 
     private nonisolated static func rasterized(_ image: NSImage, size: CGFloat) -> NSImage? {
-        let px = Int(ceil(size * 2))
+        let px = pixelSize(for: size)
         guard let rep = NSBitmapImageRep(
             bitmapDataPlanes: nil,
             pixelsWide: px,
@@ -104,8 +129,11 @@ final class IconCache: ObservableObject {
         return result
     }
 
-    private nonisolated static func byteCost(size: NSSize) -> Int {
-        Int(ceil(size.width * 2) * ceil(size.height * 2) * 4)
+    private nonisolated static func byteCost(image: NSImage) -> Int {
+        guard let rep = image.representations.compactMap({ $0 as? NSBitmapImageRep }).first else {
+            return Int(ceil(image.size.width * 2) * ceil(image.size.height * 2) * 4)
+        }
+        return rep.pixelsWide * rep.pixelsHigh * max(rep.bitsPerPixel / 8, 4)
     }
 }
 
@@ -117,27 +145,38 @@ struct LoadedIcon: View {
     let displaySize: CGFloat
     let loadSize: CGFloat
     let loadsImage: Bool
+    let cachesImageInMemory: Bool
     @EnvironmentObject private var iconCache: IconCache
     @State private var image: NSImage?
 
-    init(app: LaunchApp, displaySize: CGFloat, loadSize: CGFloat? = nil, loadsImage: Bool = true) {
+    init(
+        app: LaunchApp,
+        displaySize: CGFloat,
+        loadSize: CGFloat? = nil,
+        loadsImage: Bool = true,
+        cachesImageInMemory: Bool = true
+    ) {
         self.app = app
         self.displaySize = displaySize
         self.loadSize = loadSize ?? displaySize
         self.loadsImage = loadsImage
+        self.cachesImageInMemory = cachesImageInMemory
     }
 
     var body: some View {
         IconImage(image: image, size: displaySize)
-            .task(id: "\(app.path)-\(loadsImage)") {
+            .task(id: "\(app.path)-\(loadSize)-\(loadsImage)-\(cachesImageInMemory)") {
                 guard loadsImage else {
                     image = nil
                     return
                 }
-                image = await iconCache.loadImage(for: app, size: loadSize)
+                image = await iconCache.loadImage(for: app, size: loadSize, cacheInMemory: cachesImageInMemory)
             }
             .onChange(of: loadsImage) { _, newValue in
                 if !newValue { image = nil }
+            }
+            .onDisappear {
+                image = nil
             }
     }
 }

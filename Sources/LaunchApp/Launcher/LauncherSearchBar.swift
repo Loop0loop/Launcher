@@ -57,6 +57,8 @@ final class LauncherSearchBarView: NSView {
         textField.isEditable = true
         textField.isSelectable = true
         textField.isEnabled = true
+        textField.isAutomaticTextCompletionEnabled = false
+        textField.allowsCharacterPickerTouchBarItem = false
         textField.cell?.usesSingleLineMode = true
         textField.cell?.wraps = false
         textField.cell?.isScrollable = true

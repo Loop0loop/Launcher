@@ -100,3 +100,6 @@ Signing and notarization are documented in [docs/PACKAGING.md](docs/PACKAGING.md
 ## Status
 
 The project has moved past the MVP scaffold and is focused on real interaction quality: native-feeling gestures, smooth page transitions, reliable folder dragging, and low memory use.
+
+## license
+MIT
