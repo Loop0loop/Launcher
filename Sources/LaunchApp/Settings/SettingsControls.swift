@@ -109,50 +109,12 @@ struct AppIconPicker: View {
 
     @ViewBuilder
     private func iconView(for option: AppIconOption) -> some View {
-        switch option {
-        case .mono:
-            ZStack {
-                Color(nsColor: .controlBackgroundColor)
-                Image(systemName: "circle.grid.3x3")
-                    .font(.system(size: 18, weight: .light))
-                    .foregroundStyle(.primary)
-            }
-        case .blue:
-            ZStack {
-                Color.blue
-                Image(systemName: "circle.grid.3x3.fill")
-                    .font(.system(size: 18))
-                    .foregroundStyle(.white)
-            }
-        case .color:
-            ZStack {
-                Color(nsColor: .controlBackgroundColor)
-                Grid(horizontalSpacing: 4, verticalSpacing: 4) {
-                    GridRow {
-                        Circle().fill(.red)
-                        Circle().fill(.orange)
-                        Circle().fill(.yellow)
-                    }
-                    GridRow {
-                        Circle().fill(.green)
-                        Circle().fill(.blue)
-                        Circle().fill(.purple)
-                    }
-                    GridRow {
-                        Circle().fill(.pink)
-                        Circle().fill(.cyan)
-                        Circle().fill(.mint)
-                    }
-                }
-                .frame(width: 18, height: 18)
-            }
-        case .rocket:
-            ZStack {
-                LinearGradient(colors: [Color.gray, Color.black], startPoint: .top, endPoint: .bottom)
-                Image(systemName: "rocket.fill")
-                    .font(.system(size: 18))
-                    .foregroundStyle(.white)
-            }
+        if let image = option.image() {
+            Image(nsImage: image)
+                .resizable()
+                .scaledToFit()
+        } else {
+            Color(nsColor: .controlBackgroundColor)
         }
     }
 }

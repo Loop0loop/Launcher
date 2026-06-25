@@ -106,6 +106,8 @@ jobs:
         run: |
           set -euo pipefail
           swift run LaunchpadPackager notarize
+          test -f .build/Launchpad.app/Contents/Resources/Launch.png
+          test -f .build/Launchpad.app/Contents/Resources/Launch_black.png
           mv .build/Launchpad.dmg ".build/Launchpad-${{ steps.version.outputs.version }}.dmg"
 
       - name: Upload workflow artifact

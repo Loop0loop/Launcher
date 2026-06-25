@@ -31,8 +31,8 @@ if [ -f .env ]; then
 fi
 cp Resources/AppIcon.icns "$app/Contents/Resources/AppIcon.icns"
 cp Resources/MenuBarIcon.png "$app/Contents/Resources/MenuBarIcon.png"
-cp Resources/AppIconColor.png "$app/Contents/Resources/AppIconColor.png"
-cp Resources/AppIconMono.png "$app/Contents/Resources/AppIconMono.png"
+cp public/Launch.png "$app/Contents/Resources/Launch.png"
+cp public/Launch_black.png "$app/Contents/Resources/Launch_black.png"
 if [ -d ".build/apple/Products/Debug/Frameworks" ]; then
   cp -R ".build/apple/Products/Debug/Frameworks" "$app/Contents/Frameworks"
 fi

@@ -11,3 +11,8 @@ video.mp4
 .claude
 .pnpm-store
 .env
+# Added by code-review-graph
+.code-review-graph/
+.gemini
+.mcp.json
+GEMINI.md

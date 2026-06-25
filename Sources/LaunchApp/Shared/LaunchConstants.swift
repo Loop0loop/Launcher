@@ -40,6 +40,12 @@ enum LaunchConstants {
         }
     }
 
+    enum Updates {
+        static var notConfigured: String {
+            Localized.t("Sparkle 업데이트 피드가 설정되지 않았습니다.", "Sparkle update feed is not configured.")
+        }
+    }
+
     enum Settings {
         static var launchAtLogin: String { Localized.t("로그인 시 실행", "Launchpad at Login") }
         static var accessibility: String { Localized.t("손쉬운 사용", "Accessibility") }
@@ -168,7 +174,8 @@ enum LaunchConstants {
         static let pageChangeCooldown: TimeInterval = 0.35
         static let folderEntranceScale: CGFloat = 0.85
         static let dragEdgeWidth: CGFloat = 60
-        static let dragPageScrollInterval: TimeInterval = 0.35 // Snappier scroll speed (0.35s instead of 0.8s)
+        // First dwell before edge-drag paging fires (LauncherMouseMonitor re-arms slower after).
+        static let dragPageScrollInterval: TimeInterval = 0.45
     }
 
     enum Animation {
@@ -209,6 +216,10 @@ enum LaunchConstants {
         static let cornerRadius: CGFloat = 44
         static let maxIconSize: CGFloat = 98
         static let labelWidth: CGFloat = 126
+
+        // Cell pitch in the folder grid's own coordinate space, for drop->slot mapping.
+        static var colPitch: CGFloat { gridItemWidth + gridSpacing }
+        static var rowPitch: CGFloat { maxIconSize + Icon.spacing + Icon.labelHeight + spacing }
     }
 
     enum Lifecycle {

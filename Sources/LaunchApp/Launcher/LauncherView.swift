@@ -47,9 +47,12 @@ struct LauncherView: View {
                     pageSize: pageSize
                 )
                 .frame(width: geometry.size.width, height: geometry.size.height)
-                .opacity(state.openFolder == nil ? 1 : 0)
+                // Visible when no folder is open, and while pulling an app out of a folder
+                // (the panel dissolves) so the user sees the grid it's dropping back onto.
+                .opacity(state.openFolder == nil || state.folderDragPullingOut ? 1 : 0)
                 .allowsHitTesting(state.openFolder == nil)
                 .animation(LaunchConstants.Animation.fade, value: state.openFolder?.id)
+                .animation(LaunchConstants.Animation.fade, value: state.folderDragPullingOut)
 
                 if let folder = state.openFolder {
                     FolderDimLayer(opacity: LaunchConstants.Glass.openFolderDimOpacity) {

@@ -132,6 +132,10 @@ observers or domain stores.
 - Search field focus controller.
 - Mouse monitor for background dismiss and page drag.
 - Folder create/add/remove/dissolve.
+- Folder drag-out (pull an app back to the grid; the grid shows through as the panel
+  dissolves, then pages to where it lands).
+- Folder internal reorder (drop maps to a slot via `GridGeometry.cellIndex`).
+- Edge paging while dragging an icon, owned by `LauncherMouseMonitor`.
 - Tahoe-style folder panel using macOS 26 glass APIs with fallback material.
 - Repeatable app bundle build script.
 
@@ -154,19 +158,72 @@ swift run Launchpad
 
 ## Next Phases
 
-### Phase 1 - Folder UX Completion
+These phases close the "native Launchpad feel" gaps. The drag engine
+(`DragModel`, `beginItemDrag`/`updateItemDrag`/`endItemDrag`, `dropResolution`)
+and glass/lifecycle work already exist; each phase below extends them, it does
+not rebuild them. Order is by ROI: cheapest extension of existing code first.
 
-Goal: finish the minimum Launchpad-like folder interactions.
+### Phase 1 - Edge Paging During Drag
 
-- Add reorder inside folder.
-- Add drag-out removal from folder.
-- Keep right-click `Remove from Folder`.
-- Keep dissolve behavior when one app remains.
-- Add `LaunchCheck` assertions for new pure order rules.
+Goal: dragging an icon to the left/right screen edge flips the page so an app
+can be moved across pages. Today a drag is stuck on the page it started on.
+
+- Detect when the drag pointer enters a fixed edge band (left/right).
+- Single dwell timer (~0.6s) advances/retreats `currentPage`, then re-arms.
+- Cancel the timer when the pointer leaves the band, drops, or the drag cancels.
+- `dropResolution` keeps targeting the now-visible page.
+- Pure edge-band + page-step math lives in `LaunchCore`; assert in `LaunchCheck`.
+
+Touches: `Layout/AppState+Layout.swift`, `Launcher/LauncherItemViews.swift`
+(`LauncherDragModifier` already passes pointer location), `LaunchCore`.
+
+Stop condition: one dwell timer, fixed band width, no auto-scroll animation engine.
+
+### Phase 2 - Folder Internal Reorder
+
+Goal: reorder apps inside an open folder by drag. Drag-out and dissolve already
+work (`FolderOverlayAppIcon` pull-out, `removeApp(_:fromFolder:)`).
+
+- Pure reorder rule over `folder.appIDs` in `LaunchCore`.
+- `FolderOverlay` drag updates a preview index while dragging; commit on drop.
+- Keep right-click `Remove from Folder`; keep one-app dissolve.
+- Add `LaunchCheck` assertions for the new pure order rule.
+
+Touches: `Launcher/FolderOverlay.swift`, `Layout/AppState+Layout.swift`, `LaunchCore`.
 
 Stop condition: no nested folders, no custom animation engine.
 
-### Phase 2 - Localization
+### Phase 3 - Swipe Velocity And Inertia
+
+Goal: page swipe follows the finger and commits by velocity, not distance alone.
+`pageDragOffset` finger-follow and `Animation.pageSnap` already exist.
+
+- On drag end, commit the page when velocity OR distance crosses threshold.
+- Rubber-band back to the current page when neither threshold is met.
+- Disable left/right swipe while searching.
+- Pure threshold/velocity decision in `LaunchCore` (extend `TrackpadIntent`);
+  assert in `LaunchCheck`.
+
+Touches: `Input/LauncherMouseMonitor.swift`, `Input/TrackpadGestureMonitor.swift`,
+`LaunchCore/TrackpadIntent.swift`.
+
+Stop condition: one spring + two thresholds, no physics engine.
+
+### Phase 4 - Native Feel Polish
+
+Goal: the remaining visual native cues. Cosmetic, after interaction is solid.
+
+- Folder open/close morph: tile expands into the panel via `matchedGeometryEffect`.
+- `+n` overflow badge on the folder preview when apps exceed the 3x3 limit.
+- Replace one-shot gesture intents with continuous progress while tracking,
+  commit/cancel only on gesture end (open/close + page).
+
+Touches: `Launcher/FolderOverlay.swift`, `Launcher/LauncherItemViews.swift`,
+`Input/TrackpadGestureMonitor.swift`, `App/LauncherLifecycle.swift`.
+
+Stop condition: no custom animation framework, no theme system.
+
+### Phase 5 - Localization
 
 Goal: remove hardcoded user-facing English strings.
 
@@ -176,7 +233,7 @@ Goal: remove hardcoded user-facing English strings.
 
 Stop condition: no language picker until the system language path works.
 
-### Phase 3 - Logging Cleanup
+### Phase 6 - Logging Cleanup
 
 Goal: keep diagnostics without noisy production output.
 
@@ -186,7 +243,7 @@ Goal: keep diagnostics without noisy production output.
 
 Stop condition: no custom logging framework.
 
-### Phase 4 - Packaging Hardening
+### Phase 7 - Packaging Hardening
 
 Goal: make app-bundle usage reliable.
 
@@ -195,18 +252,7 @@ Goal: make app-bundle usage reliable.
 - Verify launch-at-login from app bundle.
 - Add signing/notarization only when distribution starts.
 
-Stop condition: no updater.
-
-### Phase 5 - Visual Polish
-
-Goal: tune the current UI, not replace it.
-
-- Verify folder panel on macOS 26 and older fallback.
-- Tune text fit for long app/folder names.
-- Tune windowed browsing mode.
-- Keep existing SwiftUI/AppKit split.
-
-Stop condition: no theme system.
+Stop condition: no updater work beyond existing Sparkle wiring.
 
 ## Done Definition
 

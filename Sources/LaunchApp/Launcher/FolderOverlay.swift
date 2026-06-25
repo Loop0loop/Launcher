@@ -64,6 +64,7 @@ struct FolderOverlay: View {
                 }
             }
             .frame(maxWidth: .infinity, minHeight: LaunchConstants.FolderOverlay.minGridHeight, alignment: .topLeading)
+            .coordinateSpace(name: "folderGrid")
         }
         .padding(.horizontal, LaunchConstants.FolderOverlay.horizontalPadding)
         .padding(.vertical, LaunchConstants.FolderOverlay.verticalPadding)
@@ -192,9 +193,9 @@ struct FolderOverlayAppIcon: View {
             LaunchLog.line("FolderOverlayAppIcon long press app=\(app.id) -> prompting delete")
             state.moveToTrash(app)
         }
-        // Drag an app far enough to pull it out of the folder back into the grid.
+        // Drag within the panel reorders; drag far enough out pulls the app back to the grid.
         .simultaneousGesture(
-            DragGesture(minimumDistance: 8)
+            DragGesture(minimumDistance: 8, coordinateSpace: .named("folderGrid"))
                 .updating($isDragActive) { _, dragActiveState, _ in
                     dragActiveState = true
                 }
@@ -212,6 +213,18 @@ struct FolderOverlayAppIcon: View {
                         // Close + page to the app so it's visibly dropped back on the grid.
                         state.closeFolder()
                         state.revealItem(app.id)
+                    } else {
+                        // Stayed in the panel: drop maps to a slot and reorders.
+                        let count = state.folders.first { $0.id == folderID }?.appIDs.count ?? 0
+                        let index = GridGeometry.cellIndex(
+                            x: Double(value.location.x),
+                            y: Double(value.location.y),
+                            columns: LaunchConstants.FolderOverlay.columns,
+                            colPitch: Double(LaunchConstants.FolderOverlay.colPitch),
+                            rowPitch: Double(LaunchConstants.FolderOverlay.rowPitch),
+                            count: count
+                        )
+                        state.reorderAppInFolder(app.id, toIndex: index, folderID: folderID)
                     }
                     withAnimation(LaunchConstants.Animation.iconLift) { dragOffset = .zero }
                 }

@@ -127,6 +127,21 @@ extension AppState {
         openFolder = folders.first { $0.id == folderID }
     }
 
+    /// Reorder an app within its folder to a target slot. Called once on drop, so it
+    /// persists immediately (no transient mid-drag writes).
+    func reorderAppInFolder(_ appID: String, toIndex index: Int, folderID: String) {
+        guard let fi = folders.firstIndex(where: { $0.id == folderID }) else { return }
+        var ids = folders[fi].appIDs
+        guard let from = ids.firstIndex(of: appID) else { return }
+        ids.remove(at: from)
+        ids.insert(appID, at: min(max(index, 0), ids.count))
+        guard ids != folders[fi].appIDs else { return }
+        LaunchLog.line("folder reorder app=\(appID) -> index=\(index) folder=\(folderID)")
+        folders[fi].appIDs = ids
+        LayoutStore.saveFolders(folders)
+        if openFolder?.id == folderID { openFolder = folders[fi] }
+    }
+
     func renameFolder(_ folderID: String, to name: String) {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let index = folders.firstIndex(where: { $0.id == folderID }) else { return }

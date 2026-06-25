@@ -43,6 +43,11 @@ assert(LayoutOrder.move("c", before: "b", in: ["a", "b", "c"]) == ["a", "c", "b"
 assert(AppSearch.rankedApps(searchApps, matching: "ca").map(\.name) == ["Café", "Camera"])
 assert(AppSearch.rankedApps(searchApps, matching: "notes").map(\.name) == ["Notes"])
 assert(AppSearch.rankedApps(searchApps, matching: "example.camera").map(\.name) == ["Camera"])
+assert(UpdateConfiguration(feedURL: "https://example.com/appcast.xml", publicKey: "abc").isConfigured)
+assert(!UpdateConfiguration(feedURL: "https://example.com/appcast.xml", publicKey: "REPLACE_WITH_SPARKLE_PUBLIC_ED_KEY").isConfigured)
+assert(!UpdateConfiguration(feedURL: "not a url", publicKey: "abc").isConfigured)
+assert(!UpdateConfiguration(feedURL: nil, publicKey: "abc").isConfigured)
+assert(!UpdateConfiguration(feedURL: "https://example.com/appcast.xml", publicKey: "").isConfigured)
 
 let folderResult = FolderLayout.createFolder(
     id: "folder-1",
@@ -111,5 +116,13 @@ assert(!TrackpadIntent.shouldAcceptScrollIntent(eventTime: 1.1, lastIntentTime: 
 assert(TrackpadIntent.pinchRadius(ratio: 0.89) == .open)
 assert(TrackpadIntent.pinchRadius(ratio: 1.11) == .close)
 assert(TrackpadIntent.pinchRadius(ratio: 1.0) == nil)
+
+// Folder reorder: map a drop point to a cell slot. 4 cols, 184x164 pitch.
+assert(GridGeometry.cellIndex(x: 10, y: 10, columns: 4, colPitch: 184, rowPitch: 164, count: 8) == 0)
+assert(GridGeometry.cellIndex(x: 200, y: 10, columns: 4, colPitch: 184, rowPitch: 164, count: 8) == 1)
+assert(GridGeometry.cellIndex(x: 10, y: 200, columns: 4, colPitch: 184, rowPitch: 164, count: 8) == 4)
+assert(GridGeometry.cellIndex(x: 9999, y: 9999, columns: 4, colPitch: 184, rowPitch: 164, count: 8) == 7)
+assert(GridGeometry.cellIndex(x: -5, y: -5, columns: 4, colPitch: 184, rowPitch: 164, count: 8) == 0)
+assert(GridGeometry.cellIndex(x: 10, y: 10, columns: 4, colPitch: 184, rowPitch: 164, count: 0) == 0)
 
 print("LaunchpadCheck OK")
