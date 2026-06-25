@@ -1,3 +1,4 @@
+import LaunchpadCore
 import SwiftUI
 
 struct LauncherView: View {
@@ -61,6 +62,8 @@ struct LauncherView: View {
                         }
                         .opacity(state.folderDragPullingOut ? 0 : 1)
                         .animation(LaunchConstants.Animation.fade, value: state.folderDragPullingOut)
+                        // 드래그 중에는 dim의 탭 제스처가 진행 중인 그리드 드래그를 가로채지 못하게 한다.
+                        .allowsHitTesting(!state.isDraggingLauncherItem)
 
                         FolderOverlay(folder: folder, state: state, availableWidth: geometry.size.width)
                             .transition(
@@ -72,16 +75,13 @@ struct LauncherView: View {
 
                     if state.isDraggingLauncherItem, state.openFolder != nil, let app = state.draggingApp {
                         let geoGlobal = geometry.frame(in: .global)
-                        let ghostPos = CGPoint(
-                            x: state.launcherGridFrame.minX - geoGlobal.minX + state.drag.location.x,
-                            y: state.launcherGridFrame.minY - geoGlobal.minY + state.drag.location.y
+                        // launcherGrid 로컬 → ZStack(geo) 로컬 변환 오프셋. 드래그 중 안정적이라 한 번만 계산.
+                        let originOffset = CGPoint(
+                            x: state.launcherGridFrame.minX - geoGlobal.minX,
+                            y: state.launcherGridFrame.minY - geoGlobal.minY
                         )
-                        LoadedIcon(app: app, displaySize: layout.iconSize, loadsImage: true)
-                            .frame(width: layout.iconSize, height: layout.iconSize)
-                            .scaleEffect(1.1)
-                            .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
-                            .position(ghostPos)
-                            .allowsHitTesting(false)
+                        // DragModel을 직접 관찰하는 전용 뷰. LauncherView 전체 리렌더 없이 고스트만 포인터를 따라간다.
+                        DragGhostView(drag: state.drag, app: app, iconSize: layout.iconSize, originOffset: originOffset)
                             .zIndex(22)
                     }
                 }
@@ -93,6 +93,24 @@ struct LauncherView: View {
         }
         .ignoresSafeArea()
         .onExitCommand { state.handleEscape() }
+    }
+}
+
+/// Spring-loaded 드롭 중 포인터를 따라다니는 드래그 고스트. `DragModel`을 `@ObservedObject`로
+/// 직접 구독해, 부모(LauncherView)를 리렌더하지 않고 이 뷰만 매 프레임 위치를 갱신한다.
+private struct DragGhostView: View {
+    @ObservedObject var drag: DragModel
+    let app: LaunchApp
+    let iconSize: CGFloat
+    let originOffset: CGPoint
+
+    var body: some View {
+        LoadedIcon(app: app, displaySize: iconSize, loadsImage: true)
+            .frame(width: iconSize, height: iconSize)
+            .scaleEffect(1.1)
+            .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
+            .position(x: originOffset.x + drag.location.x, y: originOffset.y + drag.location.y)
+            .allowsHitTesting(false)
     }
 }
 

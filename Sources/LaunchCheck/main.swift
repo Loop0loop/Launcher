@@ -101,6 +101,14 @@ let addToFolderResult = FolderLayout.addApp(
 assert(addToFolderResult.folders == [LaunchFolder(id: "folder", name: "Folder", appIDs: ["a", "c", "b"])])
 assert(addToFolderResult.order == ["folder"])
 
+let addManyToFolderResult = ["b", "d", "e"].reduce(
+    (folders: [LaunchFolder(id: "folder", name: "Folder", appIDs: ["a", "c"])], order: ["folder", "b", "d", "e"])
+) { state, appID in
+    FolderLayout.addApp(appID: appID, toFolderID: "folder", folders: state.folders, order: state.order)
+}
+assert(addManyToFolderResult.folders == [LaunchFolder(id: "folder", name: "Folder", appIDs: ["a", "c", "b", "d", "e"])])
+assert(addManyToFolderResult.order == ["folder"])
+
 let removeFromFolderResult = FolderLayout.removeApp(
     appID: "b",
     fromFolderID: "folder",
