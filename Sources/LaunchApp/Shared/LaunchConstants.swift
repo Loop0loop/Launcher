@@ -170,6 +170,7 @@ enum LaunchConstants {
         static let dragHoldZoneScale: CGFloat = 0.80
         static let dragInsertionBandRatio: CGFloat = 0.18
         static let dragMergeDwell: TimeInterval = 0.28
+        static let editModeLongPress: TimeInterval = 0.35
         static let folderCreationOpenDelay: TimeInterval = 0.16
         static let folderCreationScale: CGFloat = 1.10
         static let folderPullOutLandingScale: CGFloat = 1.08

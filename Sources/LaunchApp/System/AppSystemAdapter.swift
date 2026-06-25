@@ -17,6 +17,11 @@ enum AppSystemAdapter {
         try FileManager.default.trashItem(at: url, resultingItemURL: nil)
     }
 
+    static func canMoveToTrash(_ app: LaunchApp) -> Bool {
+        guard let url = app.existingBundleURL else { return false }
+        return FileManager.default.isDeletableFile(atPath: url.path)
+    }
+
     // ponytail: restarting Dock is the only reliable public way to add a persistent tile.
     static func addToDock(_ app: LaunchApp) {
         guard let url = app.existingBundleURL, let tile = dockTilePlist(for: url.path) else { return }

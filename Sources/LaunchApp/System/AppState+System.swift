@@ -14,6 +14,10 @@ extension AppState {
         actions.moveToTrash(app)
     }
 
+    func canMoveToTrash(_ app: LaunchApp) -> Bool {
+        AppSystemAdapter.canMoveToTrash(app)
+    }
+
     func addToDock(_ app: LaunchApp) {
         actions.addToDock(app)
     }

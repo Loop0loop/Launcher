@@ -38,6 +38,7 @@ final class AppState: ObservableObject {
     @Published var currentPage = 0
     @Published var selectedItemID: String?
     @Published var keyboardSelectionActive = false
+    @Published var isEditingLayout = false
     @Published var draggingItemID: String?
     /// 매 프레임 갱신되는 드래그 위치/머지 대상은 DragModel로 격리(그리드 전체 리렌더 방지).
     /// 로직 코드는 기존 이름 그대로 쓰도록 forwarder를 둔다. begin/end에만 바뀌는
@@ -59,9 +60,7 @@ final class AppState: ObservableObject {
     @Published var launcherGridFrame: CGRect = .zero
     @Published var folderGridFrame: CGRect = .zero
     @Published var folderDragPullingOut = false
-    @Published var folderPullOutAppID: String? {
-        didSet { invalidateVisibleItems() }
-    }
+    @Published var folderPullOutAppID: String?
     /// 폴더 내부 재배열 라이브 프리뷰. 드래그 중인 앱과 목표 슬롯. 슬롯을 가로지를 때만 바뀌어
     /// 다른 아이콘이 실시간으로 비켜난다(메인 그리드 dragInsertionIndex와 동일 패턴).
     @Published var folderReorderingID: String?

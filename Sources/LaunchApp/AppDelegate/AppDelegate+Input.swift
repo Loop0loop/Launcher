@@ -100,6 +100,13 @@ extension AppDelegate {
             guard let self, launcherLifecycle?.isVisible == true else { return event }
             return handleLauncherKey(event)
         }
+        modifierKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .flagsChanged) { [weak self] event in
+            guard let self, launcherLifecycle?.isVisible == true else { return event }
+            if event.modifierFlags.contains(.option) {
+                state.startEditingLayout()
+            }
+            return event
+        }
     }
 
     /// True while any text field other than the search bar is being edited (the folder title).

@@ -34,7 +34,7 @@ extension AppState {
         if !searchQuery.isEmpty {
             items = visibleApps.map(LauncherItem.app)
         } else {
-            let folderedIDs = Set(folders.flatMap(\.appIDs).filter { $0 != folderPullOutAppID })
+            let folderedIDs = Set(folders.flatMap(\.appIDs))
             let appsByID = Dictionary(uniqueKeysWithValues: apps.map { ($0.id, $0) })
             let rootApps = apps.filter { !folderedIDs.contains($0.id) && !hiddenAppIDs.contains($0.id) }
             let appItems = rootApps.map { LauncherItem.app($0) }
@@ -42,7 +42,6 @@ extension AppState {
                 LauncherItem.folder(
                     folder,
                     folder.appIDs
-                        .filter { $0 != folderPullOutAppID }
                         .compactMap { appsByID[$0] }
                         .filter { !hiddenAppIDs.contains($0.id) }
                 )
@@ -132,6 +131,16 @@ extension AppState {
     }
 
     func removeApp(_ appID: String, fromFolder folderID: String) {
+        removeAppFromFolder(appID, folderID: folderID, keepFolderOpen: true)
+    }
+
+    func pullAppOutOfFolder(_ appID: String, folderID: String) {
+        removeAppFromFolder(appID, folderID: folderID, keepFolderOpen: false)
+        closeFolder()
+        revealItem(appID)
+    }
+
+    private func removeAppFromFolder(_ appID: String, folderID: String, keepFolderOpen: Bool) {
         let result = FolderLayout.removeApp(
             appID: appID,
             fromFolderID: folderID,
@@ -141,13 +150,13 @@ extension AppState {
         folders = result.folders
         LayoutStore.saveFolders(folders)
         saveOrder(result.order)
-        openFolder = folders.first { $0.id == folderID }
+        openFolder = keepFolderOpen ? folders.first { $0.id == folderID } : nil
     }
 
     /// 폴더 내부 드래그 라이브 프리뷰: 재배열 중인 앱을 목표 슬롯으로 옮긴 순서.
     /// 메인 그리드의 dragRenderItems와 동일 규칙이라 프리뷰 == 드롭 결과.
     func folderRenderApps(_ folder: LaunchFolder) -> [LaunchApp] {
-        let apps = apps(in: folder).filter { $0.id != folderPullOutAppID }
+        let apps = apps(in: folder)
         guard let id = folderReorderingID, let index = folderDragInsertionIndex,
               apps.contains(where: { $0.id == id }) else { return apps }
         let ids = LayoutOrder.move(id, toIndex: index, in: apps.map(\.id))

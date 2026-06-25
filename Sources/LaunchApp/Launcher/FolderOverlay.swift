@@ -167,6 +167,7 @@ struct FolderOverlayAppIcon: View {
     @State private var dragPointer: CGPoint?
     @State private var iconFrame: CGRect = .zero
     @State private var pullOutStartCenter: CGPoint?
+    @State private var pulledOutDuringDrag = false
     @State private var isLaunching = false
     @GestureState private var isDragActive = false
 
@@ -176,7 +177,7 @@ struct FolderOverlayAppIcon: View {
     }
 
     private var isPullingOut: Bool {
-        state.folderDragPullingOut && dragOffset != .zero
+        pulledOutDuringDrag
     }
 
     /// Cell center (folderGrid space) for slot `index`, matching GridGeometry.cellIndex binning.
@@ -284,10 +285,13 @@ struct FolderOverlayAppIcon: View {
                     state.launch(app)
                 }
             }
-            .onLongPressGesture(minimumDuration: 0.8) {
-                LaunchLog.line("FolderOverlayAppIcon long press app=\(app.id) -> prompting delete")
-                state.moveToTrash(app)
-            }
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.18, maximumDistance: 18)
+                    .onEnded { _ in
+                        LaunchLog.line("FolderOverlayAppIcon long press app=\(app.id) -> prompting delete")
+                        state.moveToTrash(app)
+                    }
+            )
             // Inside the folder grid: reorder. Outside it: pull the app back to the root grid.
             .simultaneousGesture(
                 DragGesture(minimumDistance: 8, coordinateSpace: .global)
@@ -296,8 +300,9 @@ struct FolderOverlayAppIcon: View {
                     }
                     .onChanged { value in
                         let localLocation = folderLocalLocation(from: value.location)
-                        let isPullingOut = state.folderDragPullingOut || !isInsideFolderGrid(localLocation)
-                        if isPullingOut {
+                        let shouldPullOut = pulledOutDuringDrag || !isInsideFolderGrid(localLocation)
+                        if shouldPullOut {
+                            pulledOutDuringDrag = true
                             state.endFolderReorder()
                             state.folderDragPullingOut = true
                             if state.folderPullOutAppID != app.id {
@@ -314,12 +319,10 @@ struct FolderOverlayAppIcon: View {
                     }
                     .onEnded { value in
                         let localLocation = folderLocalLocation(from: value.location)
-                        let pulledOut = state.folderDragPullingOut || !isInsideFolderGrid(localLocation)
+                        let pulledOut = pulledOutDuringDrag || !isInsideFolderGrid(localLocation)
                         if pulledOut {
                             LaunchLog.line("folder pull-out app=\(app.id) folder=\(folderID)")
-                            state.removeApp(app.id, fromFolder: folderID)
-                            state.closeFolder()
-                            state.revealItem(app.id)
+                            state.pullAppOutOfFolder(app.id, folderID: folderID)
                         } else {
                             let index = state.folderDragInsertionIndex ?? slotIndex(at: localLocation)
                             state.reorderAppInFolder(app.id, toIndex: index, folderID: folderID)
@@ -328,6 +331,7 @@ struct FolderOverlayAppIcon: View {
                         state.folderPullOutAppID = nil
                         state.endFolderReorder()
                         pullOutStartCenter = nil
+                        pulledOutDuringDrag = false
                         dragPointer = nil
                         withAnimation(LaunchConstants.Animation.iconLift) { dragOffset = .zero }
                     }
@@ -338,6 +342,7 @@ struct FolderOverlayAppIcon: View {
                     state.folderPullOutAppID = nil
                     state.endFolderReorder()
                     pullOutStartCenter = nil
+                    pulledOutDuringDrag = false
                     dragPointer = nil
                     withAnimation(LaunchConstants.Animation.iconLift) { dragOffset = .zero }
                 }
@@ -347,6 +352,7 @@ struct FolderOverlayAppIcon: View {
                 state.folderPullOutAppID = nil
                 state.endFolderReorder()
                 pullOutStartCenter = nil
+                pulledOutDuringDrag = false
             }
             .contextMenu {
                 launcherAppContextMenu(app: app, state: state)

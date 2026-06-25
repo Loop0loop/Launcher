@@ -3,7 +3,7 @@ import SwiftUI
 
 struct LauncherItemView: View {
     let item: LauncherItem
-    let state: AppState
+    @ObservedObject var state: AppState
     let layout: LaunchpadLayoutMetrics
     let pageOffset: CGFloat
     var loadsIcons = true
@@ -21,7 +21,7 @@ struct LauncherItemView: View {
 
 struct AppIcon: View {
     let app: LaunchApp
-    let state: AppState
+    @ObservedObject var state: AppState
     let layout: LaunchpadLayoutMetrics
     let pageOffset: CGFloat
     let loadsIcon: Bool
@@ -40,20 +40,28 @@ struct AppIcon: View {
                 .launchLabelStyle()
         }
         .frame(width: max(layout.iconSize, layout.labelWidth))
+        .overlay(alignment: .topLeading) {
+            if state.isEditingLayout, state.canMoveToTrash(app) {
+                DeleteBadge {
+                    state.suppressPageControlTap()
+                    state.moveToTrash(app)
+                }
+                .offset(x: 2, y: -8)
+            }
+        }
         .contentShape(Rectangle())
         .frame(width: layout.columnWidth)
+        .editingJiggle(active: state.isEditingLayout, id: app.id)
         .scaleEffect(isLanding ? LaunchConstants.Launcher.folderPullOutLandingScale : 1)
         .overlay(keyboardSelectionBackground(isSelected: state.query.isEmpty && state.showsKeyboardSelection(for: app.id)))
         .animation(LaunchConstants.Animation.iconLift, value: isLanding)
-        .highPriorityGesture(TapGesture().onEnded {
+        .launcherTap(enabled: !state.isEditingLayout) {
             state.suppressPageControlTap()
             state.launch(app)
-        })
-        .onLongPressGesture(minimumDuration: 0.8) {
-            LaunchLog.line("AppIcon long press app=\(app.id) -> prompting delete")
-            state.moveToTrash(app)
         }
+        .editModePress { state.startEditingLayout() }
         .launcherDrag(id: app.id, state: state, layout: layout, pageOffset: pageOffset)
+        .zIndex(state.isEditingLayout ? 5 : 0)
         .contextMenu {
             launcherAppContextMenu(app: app, state: state)
         }
@@ -63,7 +71,7 @@ struct AppIcon: View {
 struct FolderIcon: View {
     let folder: LaunchFolder
     let apps: [LaunchApp]
-    let state: AppState
+    @ObservedObject var state: AppState
     let layout: LaunchpadLayoutMetrics
     let pageOffset: CGFloat
     let loadsIcons: Bool
@@ -129,10 +137,10 @@ struct FolderIcon: View {
         .scaleEffect(isNewFolder ? LaunchConstants.Launcher.folderCreationScale : 1)
         .overlay(keyboardSelectionBackground(isSelected: state.query.isEmpty && state.showsKeyboardSelection(for: folder.id)))
         .animation(LaunchConstants.Animation.folder, value: isNewFolder)
-        .highPriorityGesture(TapGesture().onEnded {
+        .launcherTap(enabled: !state.isEditingLayout) {
             state.suppressPageControlTap()
             state.openFolderFromTap(folder)
-        })
+        }
         .launcherDrag(id: folder.id, state: state, layout: layout, pageOffset: pageOffset)
     }
 }
@@ -155,6 +163,81 @@ private func keyboardSelectionBackground(isSelected: Bool) -> some View {
             .strokeBorder(.white.opacity(0.45), lineWidth: 1.5)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
+    }
+}
+
+private struct DeleteBadge: View {
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                Circle()
+                    .fill(.ultraThinMaterial)
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [.white.opacity(0.24), .black.opacity(0.20)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                Circle()
+                    .strokeBorder(.white.opacity(0.22), lineWidth: 0.8)
+                Image(systemName: "xmark")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.96))
+                    .shadow(color: .black.opacity(0.38), radius: 1, y: 0.5)
+            }
+            .frame(width: 30, height: 30)
+            .contentShape(Circle())
+        }
+            .buttonStyle(.plain)
+            .frame(width: 34, height: 34)
+            .shadow(color: .black.opacity(0.28), radius: 5, y: 2)
+            .accessibilityLabel(Text(LaunchConstants.Menu.moveToTrash))
+    }
+}
+
+private struct EditingJiggleModifier: ViewModifier {
+    let active: Bool
+    let id: String
+
+    private var phase: Double {
+        Double(id.unicodeScalars.reduce(0) { ($0 + Int($1.value)) % 360 })
+    }
+
+    func body(content: Content) -> some View {
+        TimelineView(.animation(minimumInterval: 1.0 / 30.0, paused: !active)) { timeline in
+            let t = timeline.date.timeIntervalSinceReferenceDate
+            let angle = active ? sin(t * 15.0 + phase) * 0.85 : 0
+            content.rotationEffect(.degrees(angle))
+        }
+    }
+}
+
+private extension View {
+    func editingJiggle(active: Bool, id: String) -> some View {
+        modifier(EditingJiggleModifier(active: active, id: id))
+    }
+
+    func editModePress(action: @escaping () -> Void) -> some View {
+        simultaneousGesture(
+            LongPressGesture(minimumDuration: LaunchConstants.Launcher.editModeLongPress, maximumDistance: 18)
+                .onEnded { _ in
+                    LaunchLog.line("AppIcon long press -> edit mode")
+                    action()
+                }
+        )
+    }
+
+    @ViewBuilder
+    func launcherTap(enabled: Bool, action: @escaping () -> Void) -> some View {
+        if enabled {
+            highPriorityGesture(TapGesture().onEnded(action))
+        } else {
+            self
+        }
     }
 }
 

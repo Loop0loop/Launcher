@@ -17,6 +17,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     var settingsWindow: NSWindow?
     var statusItem: NSStatusItem?
     var keyMonitor: Any?
+    var modifierKeyMonitor: Any?
     var statusRightClickMonitor: Any?
     var trackpadIntentLockedUntil = Date.distantPast
     lazy var statusMenu: NSMenu = makeStatusMenu()

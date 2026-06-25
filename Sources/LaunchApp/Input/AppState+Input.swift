@@ -15,6 +15,7 @@ extension AppState {
 
     func appendSearchText(_ text: String) {
         guard !text.isEmpty else { return }
+        stopEditingLayout()
         closeFolder()
         query += text
     }
@@ -32,6 +33,9 @@ extension AppState {
         }
         if isDraggingLauncherItem {
             cancelDrag()
+        } else if isEditingLayout {
+            LaunchLog.line("handleEscape stop layout edit mode")
+            stopEditingLayout()
         } else if openFolder != nil {
             closeFolder()
         } else if !query.isEmpty {
@@ -131,6 +135,7 @@ extension AppState {
     }
 
     func openFolderFromTap(_ folder: LaunchFolder) {
+        stopEditingLayout()
         guard Date() >= folderReopenLockedUntil else {
             LaunchLog.line("folder icon tap ignored during close cooldown id=\(folder.id)")
             return
@@ -214,5 +219,19 @@ extension AppState {
 
     func clearSearch() {
         query = ""
+    }
+
+    func startEditingLayout() {
+        guard query.isEmpty, openFolder == nil else { return }
+        guard !isEditingLayout else { return }
+        LaunchLog.line("layout edit mode start")
+        isEditingLayout = true
+        clearSelection()
+    }
+
+    func stopEditingLayout() {
+        guard isEditingLayout else { return }
+        LaunchLog.line("layout edit mode stop")
+        isEditingLayout = false
     }
 }

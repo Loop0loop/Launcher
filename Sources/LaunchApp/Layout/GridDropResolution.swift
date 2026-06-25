@@ -42,6 +42,7 @@ extension AppState {
 
     func beginItemDrag(_ id: String) {
         guard query.isEmpty, openFolder == nil else { return }
+        stopEditingLayout()
         draggingItemID = id
         dragTranslation = .zero
         resetDragIntent()
@@ -186,7 +187,7 @@ extension AppState {
         }
 
         let draggedIsApp = appByID(dragged) != nil
-        let mergeTarget = dragIntent.confirmedMergeTargetID ?? onIconID
+        let mergeTarget = dragIntent.confirmedMergeTargetID
         if draggedIsApp, let target = mergeTarget, target != dragged {
             if appByID(target) != nil {
                 createFolder(draggedID: dragged, targetID: target)
