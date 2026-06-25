@@ -31,7 +31,7 @@ extension AppState {
         if let visibleItemsCache { return visibleItemsCache }
 
         let items: [LauncherItem]
-        if !query.isEmpty {
+        if !searchQuery.isEmpty {
             items = visibleApps.map(LauncherItem.app)
         } else {
             let folderedIDs = Set(folders.flatMap(\.appIDs))

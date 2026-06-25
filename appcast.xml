@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
-    <title>Launch Updates</title>
+    <title>Launchpad Updates</title>
     <link>https://github.com/Loop0loop/Launcher</link>
-    <description>Launch app updates.</description>
+    <description>Launchpad app updates.</description>
   </channel>
 </rss>

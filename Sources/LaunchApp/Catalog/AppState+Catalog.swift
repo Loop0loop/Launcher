@@ -5,8 +5,8 @@ import LaunchpadCore
 extension AppState {
     var visibleApps: [LaunchApp] {
         let shown = apps.filter { !hiddenAppIDs.contains($0.id) }
-        guard !query.isEmpty else { return shown }
-        return AppSearch.rankedApps(shown, matching: query)
+        guard !searchQuery.isEmpty else { return shown }
+        return AppSearch.rankedApps(shown, matching: searchQuery)
     }
 
     func refreshAppsAsync(priority: TaskPriority = .userInitiated, delay: TimeInterval = 0) {

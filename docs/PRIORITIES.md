@@ -18,7 +18,7 @@ Required checks:
 swift build
 swift run LaunchCheck
 Scripts/build-app.sh
-swift run Launch
+swift run Launchpad
 ```
 
 ### P1 - Core Launcher UX

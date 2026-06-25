@@ -149,7 +149,7 @@ Default checks:
 swift run LaunchCheck
 swift build
 Scripts/build-app.sh
-swift run Launch
+swift run Launchpad
 ```
 
 ## Next Phases
@@ -216,5 +216,5 @@ A phase is done when:
 - `swift run LaunchCheck` passes
 - `swift build` passes
 - `Scripts/build-app.sh` passes
-- `swift run Launch` starts without immediate crash
+- `swift run Launchpad` starts without immediate crash
 - docs are updated when lifecycle or ownership changes

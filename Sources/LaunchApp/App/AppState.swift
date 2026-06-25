@@ -12,16 +12,45 @@ final class AppState: ObservableObject {
     }
     @Published var query = "" {
         didSet {
-            invalidateVisibleItems()
-            handleQueryChange(oldValue: oldValue)
+            // 3B: 검색 랭킹은 80ms debounce. 빈 문자열(검색 종료)은 즉시 반영.
+            if query.isEmpty {
+                searchDebounceTask?.cancel()
+                searchDebounceTask = nil
+                let prevEmpty = searchQuery.isEmpty
+                searchQuery = ""
+                invalidateVisibleItems()
+                handleQueryChange(prevSearchEmpty: prevEmpty)
+            } else {
+                searchDebounceTask?.cancel()
+                searchDebounceTask = Task { [weak self] in
+                    try? await Task.sleep(nanoseconds: 80_000_000)
+                    guard let self, !Task.isCancelled else { return }
+                    let prevEmpty = self.searchQuery.isEmpty
+                    self.searchQuery = self.query
+                    self.invalidateVisibleItems()
+                    self.handleQueryChange(prevSearchEmpty: prevEmpty)
+                }
+            }
         }
     }
+    /// debounce 적용된 검색어. visibleApps/visibleItems는 이쪽을 본다(query 자체는 입력창용 즉시값).
+    @Published var searchQuery = ""
     @Published var currentPage = 0
     @Published var selectedItemID: String?
     @Published var keyboardSelectionActive = false
     @Published var draggingItemID: String?
-    @Published var dragHoverTargetID: String?
-    @Published var dragTranslation: CGSize = .zero
+    /// 매 프레임 갱신되는 드래그 위치/머지 대상은 DragModel로 격리(그리드 전체 리렌더 방지).
+    /// 로직 코드는 기존 이름 그대로 쓰도록 forwarder를 둔다. begin/end에만 바뀌는
+    /// draggingItemID는 renderedPages가 의존하므로 AppState에 남겨 그리드를 갱신한다.
+    let drag = DragModel()
+    var dragHoverTargetID: String? {
+        get { drag.hoverTargetID }
+        set { drag.hoverTargetID = newValue }
+    }
+    var dragTranslation: CGSize {
+        get { drag.translation }
+        set { drag.translation = newValue }
+    }
     @Published var openFolder: LaunchFolder?
     /// True while an app is being dragged past the pull-out threshold inside an open folder:
     /// the folder surface dissolves so only the dragged app stays in hand.
@@ -142,6 +171,7 @@ final class AppState: ObservableObject {
     var folderReopenLockedUntil = Date.distantPast
     var backgroundDismissLockedUntil = Date.distantPast
     var catalogRefreshTask: Task<Void, Never>?
+    var searchDebounceTask: Task<Void, Never>?
     /// 드래그 중 폴더 위에 머물 때 일정 시간 후 폴더를 자동으로 여는 hover 타이머.
     var folderHoverOpenTask: Task<Void, Never>?
     var visibleItemsCache: [LauncherItem]?

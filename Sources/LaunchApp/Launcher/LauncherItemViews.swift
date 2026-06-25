@@ -20,13 +20,12 @@ struct LauncherItemView: View {
 struct AppIcon: View {
     let app: LaunchApp
     let state: AppState
-    @EnvironmentObject private var iconCache: IconCache
     let layout: LaunchpadLayoutMetrics
     let pageOffset: CGFloat
 
     var body: some View {
         VStack(spacing: LaunchConstants.Icon.spacing) {
-            IconImage(image: iconCache.icon(for: app, size: layout.iconSize), size: layout.iconSize)
+            LoadedIcon(app: app, displaySize: layout.iconSize)
                 .shadow(color: .black.opacity(0.28), radius: 1.5, y: 1)
 
             Text(app.name)
@@ -58,7 +57,6 @@ struct FolderIcon: View {
     let folder: LaunchFolder
     let apps: [LaunchApp]
     let state: AppState
-    @EnvironmentObject private var iconCache: IconCache
     let layout: LaunchpadLayoutMetrics
     let pageOffset: CGFloat
 
@@ -87,7 +85,7 @@ struct FolderIcon: View {
                     spacing: miniGap
                 ) {
                     ForEach(apps.prefix(LaunchConstants.Icon.folderPreviewLimit)) { app in
-                        IconImage(image: iconCache.icon(for: app, size: layout.iconSize), size: miniIconSize)
+                        LoadedIcon(app: app, displaySize: miniIconSize, loadSize: layout.iconSize)
                     }
                 }
             }
@@ -139,15 +137,16 @@ struct LauncherDragModifier: ViewModifier {
     let layout: LaunchpadLayoutMetrics
     let pageOffset: CGFloat
 
+    @EnvironmentObject private var drag: DragModel
     @GestureState private var isDragActive = false
 
     func body(content: Content) -> some View {
         let isDragging = state.draggingItemID == id
-        let isMergeTarget = state.dragHoverTargetID == id
-        
+        let isMergeTarget = drag.hoverTargetID == id
+
         let translation = isDragging ? CGSize(
-            width: state.dragTranslation.width - pageOffset,
-            height: state.dragTranslation.height
+            width: drag.translation.width - pageOffset,
+            height: drag.translation.height
         ) : .zero
 
         // 1C: 드래그 중인 항목은 원래 자리에 어두운 고스트 슬롯을 남기고,
@@ -170,7 +169,7 @@ struct LauncherDragModifier: ViewModifier {
         .zIndex(isDragging ? 100 : 0)
             .animation(LaunchConstants.Animation.iconLift, value: isMergeTarget)
             .animation(isDragging ? nil : LaunchConstants.Animation.iconLift, value: isDragging)
-            .animation(isDragging ? nil : LaunchConstants.Animation.iconLift, value: state.dragTranslation)
+            .animation(isDragging ? nil : LaunchConstants.Animation.iconLift, value: drag.translation)
             .gesture(
                 DragGesture(minimumDistance: 8, coordinateSpace: .named("launcherGrid"))
                     .updating($isDragActive) { _, dragActiveState, _ in

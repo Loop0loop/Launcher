@@ -314,10 +314,10 @@ Default checks:
 swift run LaunchCheck
 swift build
 Scripts/build-app.sh
-swift run Launch
+swift run Launchpad
 ```
 
-`swift run Launch` is the only check that proves AppKit startup does not crash.
+`swift run Launchpad` is the only check that proves AppKit startup does not crash.
 
 ## Current Debt
 

@@ -10,7 +10,7 @@ enum LaunchConstants {
     }
 
     enum Menu {
-        static var toggle: String { Localized.t("런처 토글", "Toggle Launch") }
+        static var toggle: String { Localized.t("런처 토글", "Toggle Launchpad") }
         static var settings: String { Localized.t("설정", "Settings") }
         static var checkForUpdates: String { Localized.t("업데이트 확인...", "Check for Updates...") }
         static var refreshApps: String { Localized.t("앱 새로고침", "Refresh Apps") }
@@ -41,7 +41,7 @@ enum LaunchConstants {
     }
 
     enum Settings {
-        static var launchAtLogin: String { Localized.t("로그인 시 실행", "Launch at Login") }
+        static var launchAtLogin: String { Localized.t("로그인 시 실행", "Launchpad at Login") }
         static var accessibility: String { Localized.t("손쉬운 사용", "Accessibility") }
         static var trackpad: String { Localized.t("트랙패드", "Trackpad") }
         static var globalHotKey: String { Localized.t("전역 단축키", "Global HotKey") }

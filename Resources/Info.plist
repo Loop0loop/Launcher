@@ -7,7 +7,7 @@
     <key>CFBundleIconFile</key>
     <string>AppIcon</string>
     <key>CFBundleIdentifier</key>
-    <string>app.launch.mvp</string>
+    <string>app.launchpad.mvp</string>
     <key>CFBundleName</key>
     <string>Launchpad</string>
     <key>CFBundlePackageType</key>

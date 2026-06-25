@@ -51,7 +51,7 @@ Note: exact 4-finger gating uses private MultitouchSupport contact counts, with 
 - [x] Login item
 - [x] Performance pass
 
-Run: `Scripts/build-app.sh`, then open `.build/Launch.app`.
+Run: `Scripts/build-app.sh`, then open `.build/Launchpad.app`.
 
 ## Phase 7 - Bugfix Pass
 

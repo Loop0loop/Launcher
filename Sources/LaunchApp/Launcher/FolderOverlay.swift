@@ -160,7 +160,6 @@ struct FolderOverlayAppIcon: View {
     let app: LaunchApp
     let folderID: String
     @ObservedObject var state: AppState
-    @EnvironmentObject private var iconCache: IconCache
     @State private var dragOffset: CGSize = .zero
     @GestureState private var isDragActive = false
 
@@ -169,7 +168,7 @@ struct FolderOverlayAppIcon: View {
 
     var body: some View {
         VStack(spacing: LaunchConstants.Icon.spacing) {
-            IconImage(image: iconCache.icon(for: app, size: LaunchConstants.FolderOverlay.maxIconSize), size: LaunchConstants.FolderOverlay.maxIconSize)
+            LoadedIcon(app: app, displaySize: LaunchConstants.FolderOverlay.maxIconSize)
                 .shadow(color: .black.opacity(0.28), radius: 1.5, y: 1)
 
             Text(app.name)

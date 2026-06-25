@@ -21,7 +21,7 @@ struct LauncherContent: View {
             Spacer(minLength: layout.searchToGridGap)
 
             Group {
-                if state.query.isEmpty, state.displayMode == .paged {
+                if state.searchQuery.isEmpty, state.displayMode == .paged {
                     PagedGridView(
                         state: state,
                         layout: layout,

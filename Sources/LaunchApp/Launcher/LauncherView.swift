@@ -21,7 +21,7 @@ struct LauncherView: View {
             let visibleItems = state.visibleItems
             let pageSize = state.gridLayout.pageSize
             let pageCount = max(1, Int(ceil(Double(visibleItems.count) / Double(pageSize))))
-            let showsPageControl = state.query.isEmpty && state.displayMode == .paged && pageCount > 1
+            let showsPageControl = state.searchQuery.isEmpty && state.displayMode == .paged && pageCount > 1
             let gridHeight = layout.gridHeight(showsPageControl: showsPageControl)
 
             ZStack {

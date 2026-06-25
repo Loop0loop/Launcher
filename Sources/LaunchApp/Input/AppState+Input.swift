@@ -190,18 +190,18 @@ extension AppState {
         return visibleItems.first { $0.id == selectedItemID }
     }
 
-    func handleQueryChange(oldValue: String) {
-        if oldValue.isEmpty, !query.isEmpty {
+    func handleQueryChange(prevSearchEmpty: Bool) {
+        if prevSearchEmpty, !searchQuery.isEmpty {
             pageBeforeSearch = currentPage
             selectionBeforeSearch = selectedItemID
             currentPage = 0
             keyboardSelectionActive = false
             selectedItemID = nil
-        } else if !oldValue.isEmpty, query.isEmpty {
+        } else if !prevSearchEmpty, searchQuery.isEmpty {
             currentPage = min(pageBeforeSearch, pageCount - 1)
             selectedItemID = selectionBeforeSearch
             ensureSelection()
-        } else if !query.isEmpty {
+        } else if !searchQuery.isEmpty {
             currentPage = 0
             keyboardSelectionActive = false
             selectedItemID = nil

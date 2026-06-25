@@ -12,9 +12,9 @@ enum LoginItemAdapter {
             case .unsupported:
                 "Requires macOS 13 or newer."
             case .requiresApproval:
-                "Enable Launch in System Settings > General > Login Items."
+                "Enable Launchpad in System Settings > General > Login Items."
             case .notEnabled:
-                "Could not enable Launch at Login."
+                "Could not enable Launchpad at Login."
             }
         }
     }
