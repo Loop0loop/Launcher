@@ -167,6 +167,7 @@ struct LaunchPackager {
         buildConfiguration == "release" ? "Release" : "Debug"
     }
     var binaryURL: URL { root.appendingPathComponent(".build/apple/Products/\(xcodeBuildConfiguration)/Launch") }
+    var packageFrameworksURL: URL { root.appendingPathComponent(".build/apple/Products/\(xcodeBuildConfiguration)/Frameworks") }
     var stagingURL: URL { buildDir.appendingPathComponent("dmg") }
     var dmgURL: URL { buildDir.appendingPathComponent("\(name).dmg") }
     var backgroundURL: URL { root.appendingPathComponent("public/Launch.png") }
@@ -295,12 +296,13 @@ struct LaunchPackager {
         try fm.createDirectory(at: macOSURL, withIntermediateDirectories: true)
         try fm.createDirectory(at: resourcesURL, withIntermediateDirectories: true)
 
-        try copy("Resources/Info.plist", to: contentsURL.appendingPathComponent("Info.plist"))
+        try copyInfoPlist(to: contentsURL.appendingPathComponent("Info.plist"))
         try copy("Resources/AppIcon.icns", to: resourcesURL.appendingPathComponent("AppIcon.icns"))
         try copy("Resources/MenuBarIcon.png", to: resourcesURL.appendingPathComponent("MenuBarIcon.png"))
         try copy("Resources/AppIconColor.png", to: resourcesURL.appendingPathComponent("AppIconColor.png"))
         try copy("Resources/AppIconMono.png", to: resourcesURL.appendingPathComponent("AppIconMono.png"))
         try fm.copyItem(at: binaryURL, to: macOSURL.appendingPathComponent(name))
+        try copyPackageFrameworks(to: contentsURL.appendingPathComponent("Frameworks"))
         try fm.setAttributes(
             [.posixPermissions: 0o755],
             ofItemAtPath: macOSURL.appendingPathComponent(name).path
@@ -347,6 +349,27 @@ struct LaunchPackager {
         let sourceURL = root.appendingPathComponent(source)
         try requireFile(sourceURL)
         try FileManager.default.copyItem(at: sourceURL, to: destination)
+    }
+
+    func copyInfoPlist(to destination: URL) throws {
+        try copy("Resources/Info.plist", to: destination)
+        injectInfoValue("SPARKLE_FEED_URL", plistKey: "SUFeedURL", into: destination)
+        injectInfoValue("SPARKLE_PUBLIC_ED_KEY", plistKey: "SUPublicEDKey", into: destination)
+    }
+
+    func injectInfoValue(_ envKey: String, plistKey: String, into plist: URL) {
+        let dotEnv = DotEnv.load(from: root.appendingPathComponent(".env"))
+        guard let value = PackagerOptions.configValue(envKey, dotEnv: dotEnv), !value.isEmpty else { return }
+        _ = try? runProcess(
+            "/usr/libexec/PlistBuddy",
+            ["-c", "Set :\(plistKey) \(value)", plist.path],
+            quiet: true
+        )
+    }
+
+    func copyPackageFrameworks(to destination: URL) throws {
+        guard FileManager.default.fileExists(atPath: packageFrameworksURL.path) else { return }
+        try FileManager.default.copyItem(at: packageFrameworksURL, to: destination)
     }
 
     func requireFile(_ url: URL) throws {

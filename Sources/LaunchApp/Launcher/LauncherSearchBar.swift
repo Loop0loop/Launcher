@@ -8,6 +8,7 @@ final class LauncherSearchBarView: NSView {
     private let clearButton = NSButton()
     private let optionButton = NSButton()
     private let contentView = NSView()
+    private var glassChromeView: NSView?
     private var onTextChange: ((String) -> Void)?
     private var onClear: (() -> Void)?
 
@@ -17,6 +18,10 @@ final class LauncherSearchBarView: NSView {
     var onQuit: (() -> Void)?
 
     override var isFlipped: Bool { true }
+
+    /// 중성 white — 글래스 캡슐 위 아이콘/텍스트.
+    static let lavenderIcon = NSColor.white.withAlphaComponent(0.9)
+    static let lavenderText = NSColor.white.withAlphaComponent(0.95)
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -40,7 +45,7 @@ final class LauncherSearchBarView: NSView {
 
         if let icon = NSImage(systemSymbolName: "magnifyingglass", accessibilityDescription: nil) {
             iconView.image = icon
-            iconView.contentTintColor = NSColor.white.withAlphaComponent(0.86)
+            iconView.contentTintColor = LauncherSearchBarView.lavenderIcon
             iconView.imageScaling = .scaleProportionallyDown
         }
         contentView.addSubview(iconView)
@@ -57,7 +62,7 @@ final class LauncherSearchBarView: NSView {
         textField.cell?.isScrollable = true
         textField.placeholderString = LaunchConstants.Launcher.searchPlaceholder
         textField.font = NSFont.systemFont(ofSize: LaunchConstants.Launcher.searchFontSize, weight: .regular)
-        textField.textColor = .white
+        textField.textColor = LauncherSearchBarView.lavenderText
         textField.target = self
         textField.action = #selector(textDidChange)
         contentView.addSubview(textField)
@@ -65,7 +70,7 @@ final class LauncherSearchBarView: NSView {
         clearButton.isBordered = false
         clearButton.image = NSImage(systemSymbolName: "xmark.circle.fill", accessibilityDescription: "Clear")
         clearButton.imagePosition = .imageOnly
-        clearButton.contentTintColor = NSColor.white.withAlphaComponent(0.72)
+        clearButton.contentTintColor = LauncherSearchBarView.lavenderIcon.withAlphaComponent(0.80)
         clearButton.target = self
         clearButton.action = #selector(clearTapped)
         clearButton.isHidden = true
@@ -74,7 +79,7 @@ final class LauncherSearchBarView: NSView {
         optionButton.isBordered = false
         optionButton.image = NSImage(systemSymbolName: "ellipsis.circle", accessibilityDescription: "Options")
         optionButton.imagePosition = .imageOnly
-        optionButton.contentTintColor = NSColor.white.withAlphaComponent(0.86)
+        optionButton.contentTintColor = LauncherSearchBarView.lavenderIcon
         optionButton.target = self
         optionButton.action = #selector(optionTapped)
         contentView.addSubview(optionButton)
@@ -82,31 +87,34 @@ final class LauncherSearchBarView: NSView {
 
     private func configureChrome() {
         wantsLayer = true
-        // 외곽선만: 안은 텅 빈(투명). 글래스 채움 없이 둥근 캡슐 외곽선 링만 그린다.
-        // 텍스트필드/아이콘은 투명한 내부 위에 기능 오버레이로 올라간다.
+        // 진짜 리퀴드 글래스 `.clear` 단일 표면. 커스텀 그라디언트/스트로크/섀도를
+        // 겹치지 않는다(황금규칙) — 엣지/스펙큘러/배경 렌즈링은 시스템이 렌더링.
+        // 안은 완전 투명: 뒤의 배경이 렌즈되어 비친다.
         layer?.cornerRadius = LaunchConstants.Launcher.searchHeight / 2
         layer?.masksToBounds = false
-        layer?.borderWidth = 1.5
-        layer?.borderColor = NSColor.white.withAlphaComponent(LaunchConstants.Glass.searchBarStrokeOpacity).cgColor
-        layer?.shadowColor = NSColor.black.cgColor
-        layer?.shadowOpacity = Float(LaunchConstants.Glass.searchBarShadowOpacity)
-        layer?.shadowRadius = LaunchConstants.Glass.searchBarShadowRadius
-        layer?.shadowOffset = NSSize(width: 0, height: -1)
 
+        let glass = NSGlassEffectView()
+        glass.style = .clear
+        glass.cornerRadius = LaunchConstants.Launcher.searchHeight / 2
+        glass.autoresizingMask = [.width, .height]
+        glass.frame = bounds
+        glass.contentView = contentView
         contentView.autoresizingMask = [.width, .height]
-        contentView.frame = bounds
-        addSubview(contentView)
+        contentView.frame = glass.bounds
+        addSubview(glass)
+        glassChromeView = glass
     }
 
     override func layout() {
         super.layout()
-        contentView.frame = bounds
+        glassChromeView?.frame = bounds
+        contentView.frame = glassChromeView?.bounds ?? bounds
 
         let padding = LaunchConstants.Launcher.searchHorizontalPadding
-        let iconSide: CGFloat = 16
+        let iconSide: CGFloat = 18
         iconView.frame = NSRect(x: padding, y: (bounds.height - iconSide) / 2, width: iconSide, height: iconSide)
 
-        let optionSide: CGFloat = 18
+        let optionSide: CGFloat = 20
         optionButton.frame = NSRect(
             x: bounds.width - padding - optionSide,
             y: (bounds.height - optionSide) / 2,
@@ -114,7 +122,7 @@ final class LauncherSearchBarView: NSView {
             height: optionSide
         )
 
-        let clearSide: CGFloat = 18
+        let clearSide: CGFloat = 20
         clearButton.frame = NSRect(
             x: optionButton.frame.minX - 6 - clearSide,
             y: (bounds.height - clearSide) / 2,
@@ -131,11 +139,10 @@ final class LauncherSearchBarView: NSView {
     }
 
     func setActive(_ active: Bool) {
-        // 포커스 시 외곽선을 더 밝게.
-        let opacity = active
-            ? min(1, LaunchConstants.Glass.searchBarStrokeOpacity + 0.25)
-            : LaunchConstants.Glass.searchBarStrokeOpacity
-        layer?.borderColor = NSColor.white.withAlphaComponent(opacity).cgColor
+        // 포커스를 글래스 tint(시스템 통합)로만 표현. flat 오버레이/글로우 없음.
+        (glassChromeView as? NSGlassEffectView)?.tintColor = active
+            ? NSColor.white.withAlphaComponent(0.12)
+            : nil
     }
 
     func updateText(_ text: String) {

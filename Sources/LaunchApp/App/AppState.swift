@@ -37,7 +37,7 @@ final class AppState: ObservableObject {
             actions.applyInputSettings()
         }
     }
-    @Published var hotCornerSetting = UserDefaults.standard.string(forKey: "settings.hotCornerSetting") ?? "Top Left" {
+    @Published var hotCornerSetting = UserDefaults.standard.string(forKey: "settings.hotCornerSetting") ?? "Disabled" {
         didSet {
             UserDefaults.standard.set(hotCornerSetting, forKey: "settings.hotCornerSetting")
             actions.applyInputSettings()
@@ -141,7 +141,6 @@ final class AppState: ObservableObject {
         order = LayoutStore.loadOrder()
         apps = CatalogStore.loadCachedApps()
         refreshLoginItemStatus()
-        refreshAccessibilityStatus()
     }
 
     deinit {

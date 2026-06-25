@@ -9,12 +9,16 @@ extension AppState {
         return AppSearch.rankedApps(shown, matching: query)
     }
 
-    func refreshAppsAsync() {
+    func refreshAppsAsync(priority: TaskPriority = .userInitiated, delay: TimeInterval = 0) {
         catalogRefreshTask?.cancel()
         let extraRoots = appSourcePaths
-        let languageCode = appLanguage.localeCode
+        let languageCode = Localized.code
         catalogRefreshTask = Task {
-            let scanned = await Task.detached(priority: .userInitiated) {
+            if delay > 0 {
+                try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+            }
+            guard !Task.isCancelled else { return }
+            let scanned = await Task.detached(priority: priority) {
                 CatalogStore.scanApps(extraRoots: extraRoots, languageCode: languageCode)
             }.value
             guard !Task.isCancelled else { return }

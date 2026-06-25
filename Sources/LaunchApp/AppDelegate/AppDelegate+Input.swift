@@ -46,6 +46,13 @@ extension AppDelegate {
         }
     }
 
+    func startTrackpadMonitorDeferred() {
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 700_000_000)
+            startTrackpadMonitor()
+        }
+    }
+
     private func changePageFromTrackpad(_ delta: Int, intent: TrackpadIntent, ignoredLog: String) {
         if launcherLifecycle?.isVisible == true, !state.isDraggingLauncherItem {
             let oldPage = state.currentPage

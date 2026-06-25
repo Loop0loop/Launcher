@@ -69,21 +69,25 @@ struct FolderIcon: View {
         layout.iconSize * LaunchConstants.Icon.folderPreviewScale
     }
 
+    private var miniGap: CGFloat {
+        layout.iconSize * LaunchConstants.Icon.folderPreviewGapRatio
+    }
+
     var body: some View {
         VStack(spacing: LaunchConstants.Icon.spacing) {
             ZStack {
-                // Clear base: a bare RoundedRectangle fills with the foreground (dark) color
-                // and hides the glass behind it — that's what made the tile a dark card.
+                // `.clear` 글래스 타일 — 안은 투명, 배경이 비침. 미니 아이콘은 그 위에
+                // 3×3 으로 띄운다(네이티브 Launchpad 폴더 정석).
                 Color.clear
                     .frame(width: layout.iconSize, height: layout.iconSize)
                     .launchpadFolderChrome(cornerRadius: LaunchConstants.Icon.folderCornerRadius)
 
                 LazyVGrid(
                     columns: Array(
-                        repeating: GridItem(.fixed(miniIconSize), spacing: 0),
+                        repeating: GridItem(.fixed(miniIconSize), spacing: miniGap),
                         count: LaunchConstants.Icon.folderPreviewColumns
                     ),
-                    spacing: 0
+                    spacing: miniGap
                 ) {
                     ForEach(apps.prefix(LaunchConstants.Icon.folderPreviewLimit)) { app in
                         Image(nsImage: iconCache.icon(for: app, size: layout.iconSize))

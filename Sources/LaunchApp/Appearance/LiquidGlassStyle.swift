@@ -14,12 +14,11 @@ extension View {
         self.glassEffect(glass, in: shape)
     }
 
-    /// 닫힌 폴더 타일: Liquid Glass `.regular` 단일 표면. 엣지/스페큘러/굴절은 시스템이
-    /// 렌더링 — flat stroke/tint/sheen 을 얹으면 유리 위 테이프처럼 보임(스티커).
+    /// 닫힌 폴더 타일: `.clear` 고투과 글래스(배경이 은은히 비침). 역광 glow 없음.
     @ViewBuilder
     func launchpadFolderChrome(cornerRadius: CGFloat) -> some View {
         let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-        self.glassEffect(.regular, in: shape)
+        self.glassEffect(.clear, in: shape)
     }
 
     /// 열린 폴더 패널 크롬: 소프트 섀도만. 글래스·엣지·스페큘러는 상위 launchGlass가
@@ -49,8 +48,8 @@ extension View {
 struct LaunchLabelStyle: ViewModifier {
     func body(content: Content) -> some View {
         content
-            .foregroundStyle(.white.opacity(0.95))
-            .shadow(color: .black.opacity(0.35), radius: 0.5, y: 0.5)
+            .foregroundStyle(.white.opacity(0.92))
+            .shadow(color: .black.opacity(0.28), radius: 0.6, y: 0.5)
     }
 }
 

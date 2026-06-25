@@ -29,6 +29,8 @@ jobs:
       APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
       APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
       LAUNCH_BUILD_CONFIGURATION: release
+      SPARKLE_FEED_URL: https://raw.githubusercontent.com/Loop0loop/Launcher/main/appcast.xml
+      SPARKLE_PUBLIC_ED_KEY: ${{ secrets.SPARKLE_PUBLIC_ED_KEY }}
 
     steps:
       - name: Check out repository

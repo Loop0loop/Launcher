@@ -12,6 +12,7 @@ enum LaunchConstants {
     enum Menu {
         static var toggle: String { Localized.t("런처 토글", "Toggle Launch") }
         static var settings: String { Localized.t("설정", "Settings") }
+        static var checkForUpdates: String { Localized.t("업데이트 확인...", "Check for Updates...") }
         static var refreshApps: String { Localized.t("앱 새로고침", "Refresh Apps") }
         static var sortByName: String { Localized.t("이름순 정렬", "Sort by Name") }
         static var openApp: String { Localized.t("열기", "Open") }
@@ -24,6 +25,7 @@ enum LaunchConstants {
 
         static let toggleKey = "l"
         static let settingsKey = ","
+        static let checkForUpdatesKey = "u"
         static let refreshKey = "r"
         static let sortByNameKey = "s"
         static let quitKey = "q"
@@ -144,9 +146,9 @@ enum LaunchConstants {
         static let minIconSize: CGFloat = 80
         static let maxIconSize: CGFloat = 112
 
-        static let searchWidth: CGFloat = 380
-        static let searchHeight: CGFloat = 36
-        static let searchHorizontalPadding: CGFloat = 14
+        static let searchWidth: CGFloat = 460
+        static let searchHeight: CGFloat = 40
+        static let searchHorizontalPadding: CGFloat = 16
         static let searchFontSize: CGFloat = 15
 
         static let backgroundMaterial: NSVisualEffectView.Material = .fullScreenUI
@@ -183,14 +185,15 @@ enum LaunchConstants {
     enum Icon {
         static let maxLabelWidth: CGFloat = 120
         static let labelHeight: CGFloat = 34
-        static let labelFontSize: CGFloat = 13
+        static let labelFontSize: CGFloat = 12
         static let spacing: CGFloat = 8
         static let draggedOpacity = 0.35
-        static let folderCornerRadius: CGFloat = 18
+        static let folderCornerRadius: CGFloat = 22
         static let folderFillOpacity = 0.14
-        static let folderPreviewColumns = 2
-        static let folderPreviewLimit = 4
-        static let folderPreviewScale: CGFloat = 0.28
+        static let folderPreviewColumns = 3
+        static let folderPreviewLimit = 9
+        static let folderPreviewScale: CGFloat = 0.25
+        static let folderPreviewGapRatio: CGFloat = 0.05
     }
 
     enum FolderOverlay {

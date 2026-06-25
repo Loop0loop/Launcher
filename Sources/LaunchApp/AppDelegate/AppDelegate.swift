@@ -9,6 +9,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
     let globalHotKey = GlobalHotKeyAdapter()
     let hotCornerMonitor = HotCornerMonitor()
     let launcherMouseMonitor = LauncherMouseMonitor()
+    let updater = AppUpdater()
     var window: NSWindow?
     var launcherLifecycle: LauncherLifecycle?
     var settingsWindow: NSWindow?
@@ -27,18 +28,19 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         LaunchLog.line("app did finish launching")
         NSApp.setActivationPolicy(.accessory)
         makeWindow()
-        state.refreshAppsAsync()
+        state.refreshAppsAsync(
+            priority: state.apps.isEmpty ? .userInitiated : .utility,
+            delay: state.apps.isEmpty ? 0.15 : 1.5
+        )
         applyAppIcon()
         applyMenuBarVisibility()
-        state.requestAccessibilityPermission()
         startGlobalHotKey()
         startHotCornerMonitor()
-        startTrackpadMonitor()
+        startTrackpadMonitorDeferred()
         startKeyMonitor()
     }
 
     public func applicationDidBecomeActive(_ notification: Notification) {
-        state.refreshAccessibilityStatus()
         state.refreshLoginItemStatus()
     }
 

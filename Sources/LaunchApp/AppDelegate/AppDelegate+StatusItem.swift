@@ -67,6 +67,7 @@ extension AppDelegate {
         let menu = NSMenu()
         addStatusMenuItem(menu, title: LaunchConstants.Menu.toggle, action: #selector(toggleLauncher), key: LaunchConstants.Menu.toggleKey)
         addStatusMenuItem(menu, title: LaunchConstants.Menu.settings, action: #selector(showSettings), key: LaunchConstants.Menu.settingsKey)
+        addStatusMenuItem(menu, title: LaunchConstants.Menu.checkForUpdates, action: #selector(checkForUpdates), key: LaunchConstants.Menu.checkForUpdatesKey)
         addStatusMenuItem(menu, title: LaunchConstants.Menu.refreshApps, action: #selector(refreshApps), key: LaunchConstants.Menu.refreshKey)
         addStatusMenuItem(menu, title: LaunchConstants.Menu.sortByName, action: #selector(sortAppsByName), key: LaunchConstants.Menu.sortByNameKey)
         menu.addItem(.separator())
@@ -126,6 +127,12 @@ extension AppDelegate {
     func handleRefreshApps() {
         state.refreshAppsAsync()
         iconCache.clear()
+    }
+
+    @objc nonisolated func checkForUpdates() {
+        DispatchQueue.main.async { [weak self] in
+            self?.updater.checkForUpdates()
+        }
     }
 
     @objc nonisolated func sortAppsByName() {
