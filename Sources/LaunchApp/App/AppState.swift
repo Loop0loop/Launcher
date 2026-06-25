@@ -87,7 +87,10 @@ final class AppState: ObservableObject {
     @Published var f4KeyState: PermissionState = .unknown
     @Published var trackpadGateState: TrackpadGateState = .unknown
     @Published var launcherVisible = false
-    @Published var pageDragOffset: CGFloat = 0
+    var pageDragOffset: CGFloat {
+        get { drag.pageOffset }
+        set { drag.pageOffset = newValue }
+    }
     let searchFocus = SearchFocusController()
     @Published var appSourcePaths = AppSourceStore.load()
     @Published var hiddenAppIDs = Set(UserDefaults.standard.stringArray(forKey: LaunchConstants.Storage.hiddenAppsKey) ?? []) {

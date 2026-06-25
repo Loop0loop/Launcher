@@ -90,6 +90,7 @@ final class LauncherLifecycle {
             guard let self, self.transitionToken == token else { return }
             self.phase = .hidden
             self.state.launcherVisible = false
+            self.state.actions.clearIconCache()
             self.restoreSystemVisibility()
             self.window.orderOut(nil)
             self.resetPresentation()
@@ -107,6 +108,7 @@ final class LauncherLifecycle {
         state.cancelDrag()
         restoreSystemVisibility()
         state.launcherVisible = false
+        state.actions.clearIconCache()
         window.orderOut(nil)
         resetPresentation()
     }
@@ -123,6 +125,7 @@ final class LauncherLifecycle {
                 guard let self, self.transitionToken == token else { return }
                 self.phase = .hidden
                 self.state.launcherVisible = false
+                self.state.actions.clearIconCache()
                 self.restoreSystemVisibility()
                 self.window.orderOut(nil)
                 self.resetPresentation()

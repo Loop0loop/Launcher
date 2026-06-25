@@ -6,13 +6,14 @@ struct LauncherItemView: View {
     let state: AppState
     let layout: LaunchpadLayoutMetrics
     let pageOffset: CGFloat
+    var loadsIcons = true
 
     var body: some View {
         switch item {
         case .app(let app):
-            AppIcon(app: app, state: state, layout: layout, pageOffset: pageOffset)
+            AppIcon(app: app, state: state, layout: layout, pageOffset: pageOffset, loadsIcon: loadsIcons)
         case .folder(let folder, let apps):
-            FolderIcon(folder: folder, apps: apps, state: state, layout: layout, pageOffset: pageOffset)
+            FolderIcon(folder: folder, apps: apps, state: state, layout: layout, pageOffset: pageOffset, loadsIcons: loadsIcons)
         }
     }
 }
@@ -22,10 +23,11 @@ struct AppIcon: View {
     let state: AppState
     let layout: LaunchpadLayoutMetrics
     let pageOffset: CGFloat
+    let loadsIcon: Bool
 
     var body: some View {
         VStack(spacing: LaunchConstants.Icon.spacing) {
-            LoadedIcon(app: app, displaySize: layout.iconSize)
+            LoadedIcon(app: app, displaySize: layout.iconSize, loadsImage: loadsIcon)
                 .shadow(color: .black.opacity(0.28), radius: 1.5, y: 1)
 
             Text(app.name)
@@ -59,6 +61,7 @@ struct FolderIcon: View {
     let state: AppState
     let layout: LaunchpadLayoutMetrics
     let pageOffset: CGFloat
+    let loadsIcons: Bool
 
     private var miniIconSize: CGFloat {
         layout.iconSize * LaunchConstants.Icon.folderPreviewScale
@@ -85,7 +88,7 @@ struct FolderIcon: View {
                     spacing: miniGap
                 ) {
                     ForEach(apps.prefix(LaunchConstants.Icon.folderPreviewLimit)) { app in
-                        LoadedIcon(app: app, displaySize: miniIconSize, loadSize: layout.iconSize)
+                        LoadedIcon(app: app, displaySize: miniIconSize, loadSize: miniIconSize, loadsImage: loadsIcons)
                     }
                 }
             }

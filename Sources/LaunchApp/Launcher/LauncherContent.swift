@@ -83,6 +83,7 @@ struct SearchResultsGrid: View {
 
 struct PagedGridView: View {
     @ObservedObject var state: AppState
+    @EnvironmentObject private var drag: DragModel
     let layout: LaunchpadLayoutMetrics
     let columns: [GridItem]
     let pageWidth: CGFloat
@@ -107,7 +108,13 @@ struct PagedGridView: View {
 
                     LazyVGrid(columns: columns, spacing: layout.gridRowSpacing) {
                         ForEach(items(forPage: page, in: renderItems, pageSize: pageSize)) { item in
-                            LauncherItemView(item: item, state: state, layout: layout, pageOffset: thisPageOffset)
+                            LauncherItemView(
+                                item: item,
+                                state: state,
+                                layout: layout,
+                                pageOffset: thisPageOffset,
+                                loadsIcons: shouldLoadIcons(for: page)
+                            )
                         }
                     }
                     .padding(.horizontal, layout.horizontalPadding)
@@ -132,7 +139,11 @@ struct PagedGridView: View {
     }
 
     private func pageOffsetFor(_ page: Int) -> CGFloat {
-        CGFloat(page - state.currentPage) * pageWidth + state.pageDragOffset
+        CGFloat(page - state.currentPage) * pageWidth + drag.pageOffset
+    }
+
+    private func shouldLoadIcons(for page: Int) -> Bool {
+        abs(page - state.currentPage) <= 1
     }
 
     private func items(forPage page: Int, in items: [LauncherItem], pageSize: Int) -> [LauncherItem] {

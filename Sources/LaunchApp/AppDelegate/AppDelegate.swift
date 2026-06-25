@@ -90,7 +90,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
             applyWindowBrowsingMode: { [weak self] in self?.launcherLifecycle?.applyWindowBrowsingMode() },
             applyMenuBarVisibility: { [weak self] in self?.applyMenuBarVisibility() },
             applyAppIcon: { [weak self] in self?.applyAppIcon() },
-            applyInputSettings: { [weak self] in self?.applyInputSettings() }
+            applyInputSettings: { [weak self] in self?.applyInputSettings() },
+            clearIconCache: { [weak self] in self?.iconCache.clear() }
         )
     }
 }

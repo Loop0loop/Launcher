@@ -14,4 +14,5 @@ struct LauncherActions {
     var applyMenuBarVisibility: () -> Void = {}
     var applyAppIcon: () -> Void = {}
     var applyInputSettings: () -> Void = {}
+    var clearIconCache: () -> Void = {}
 }
