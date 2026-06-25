@@ -35,4 +35,11 @@ final class FolderLayoutTests: XCTestCase {
         let r = FolderLayout.addApp(appID: "a", toFolderID: "f1", folders: [folder()], order: ["f1"], at: 0)
         XCTAssertEqual(r.folders[0].appIDs, ["a", "b"])
     }
+
+    func testAddAppRemovesAppFromRootOrder() {
+        let r = FolderLayout.addApp(appID: "c", toFolderID: "f1", folders: [folder()], order: ["f1", "c"], at: 0)
+        XCTAssertEqual(r.folders[0].appIDs, ["c", "a", "b"])
+        XCTAssertFalse(r.order.contains("c"))
+        XCTAssertEqual(r.order, ["f1"])
+    }
 }

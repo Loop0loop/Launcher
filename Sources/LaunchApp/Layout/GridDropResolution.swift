@@ -111,9 +111,16 @@ extension AppState {
 
         // Spring-loaded: 폴더가 열린 상태로 드롭 — 포인터가 폴더 안이면 해당 슬롯에 추가, 밖이면 취소.
         if let folder = openFolder {
-            if appByID(dragged) != nil, !folder.appIDs.contains(dragged),
-               let slot = folderDropSlot(forCount: folder.appIDs.count) {
-                addApp(dragged, toFolder: folder.id, at: slot)
+            if appByID(dragged) != nil, !folder.appIDs.contains(dragged) {
+                if let slot = folderDropSlot(forCount: folder.appIDs.count) {
+                    addApp(dragged, toFolder: folder.id, at: slot)
+                } else if folderGridFrame == .zero {
+                    // 폴더가 막 열려 그리드 frame이 아직 측정되지 않음 → 끝에 추가(무음 드롭 방지).
+                    addApp(dragged, toFolder: folder.id)
+                } else {
+                    // 패널 밖에서 놓음 → 취소.
+                    closeFolder()
+                }
             } else {
                 closeFolder()
             }
