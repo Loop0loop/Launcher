@@ -239,8 +239,9 @@ extension AppState {
             let dy = abs(location.y - cellCenterY)
             let onIcon = dx < layout.iconSize * LaunchConstants.Launcher.dragMergeZoneScale
                 && dy < layout.iconSize * LaunchConstants.Launcher.dragMergeZoneScale
-            let holdsIconInPlace = dx < layout.iconSize * LaunchConstants.Launcher.dragHoldZoneScale
-                && dy < layout.iconSize * LaunchConstants.Launcher.dragHoldZoneScale
+            // In the icon row, keep the occupied cell stable so a direct app->app/folder
+            // drag can reach the merge zone instead of pushing the target away.
+            let holdsIconInPlace = dy < layout.iconSize * LaunchConstants.Launcher.dragHoldZoneScale
             return GridDropResolution(
                 onIconID: onIcon ? id : nil,
                 slotID: holdsIconInPlace ? nil : id,

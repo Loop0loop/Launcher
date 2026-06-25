@@ -296,27 +296,29 @@ struct FolderOverlayAppIcon: View {
                         dragActiveState = true
                     }
                     .onChanged { value in
-                        if isInsideFolderGrid(value.location) {
-                            state.folderDragPullingOut = false
-                            dragOffset = .zero
-                            dragPointer = value.location
-                            state.updateFolderReorder(app.id, toIndex: slotIndex(at: value.location))
-                        } else {
+                        let isPullingOut = state.folderDragPullingOut || !isInsideFolderGrid(value.location)
+                        if isPullingOut {
                             state.endFolderReorder()
                             state.folderDragPullingOut = true
                             dragOffset = value.translation
                             dragPointer = nil
+                        } else {
+                            state.folderDragPullingOut = false
+                            dragOffset = .zero
+                            dragPointer = value.location
+                            state.updateFolderReorder(app.id, toIndex: slotIndex(at: value.location))
                         }
                     }
                     .onEnded { value in
-                        if isInsideFolderGrid(value.location) {
-                            let index = state.folderDragInsertionIndex ?? slotIndex(at: value.location)
-                            state.reorderAppInFolder(app.id, toIndex: index, folderID: folderID)
-                        } else {
+                        let pulledOut = state.folderDragPullingOut || !isInsideFolderGrid(value.location)
+                        if pulledOut {
                             LaunchLog.line("folder pull-out app=\(app.id) folder=\(folderID)")
                             state.removeApp(app.id, fromFolder: folderID)
                             state.closeFolder()
                             state.revealItem(app.id)
+                        } else {
+                            let index = state.folderDragInsertionIndex ?? slotIndex(at: value.location)
+                            state.reorderAppInFolder(app.id, toIndex: index, folderID: folderID)
                         }
                         state.folderDragPullingOut = false
                         state.endFolderReorder()
