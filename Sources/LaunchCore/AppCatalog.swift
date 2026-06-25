@@ -22,11 +22,16 @@ public enum AppCatalog {
     }
 
     /// `languageCode` ("ko"/"en") localizes app names to that language; nil follows the system.
-    public static func scan(roots: [URL] = defaultRoots(), languageCode: String? = nil) -> [LaunchApp] {
+    public static func scan(
+        roots: [URL] = defaultRoots(),
+        languageCode: String? = nil,
+        isCancelled: () -> Bool = { false }
+    ) -> [LaunchApp] {
         let fm = FileManager.default
         var seen = Set<String>()
         var apps: [LaunchApp] = []
 
+        guard !isCancelled() else { return [] }
         for root in roots where fm.fileExists(atPath: root.path) {
             guard let files = fm.enumerator(
                 at: root,
@@ -35,13 +40,16 @@ public enum AppCatalog {
             ) else { continue }
 
             for case let url as URL in files where url.pathExtension == "app" {
-                let bundle = Bundle(url: url)
-                let key = bundle?.bundleIdentifier ?? url.standardizedFileURL.path
+                guard !isCancelled() else { return [] }
+                let info = languageCode == nil
+                    ? Bundle(url: url)?.localizedInfoDictionary ?? infoDictionary(for: url)
+                    : infoDictionary(for: url)
+                let key = info?["CFBundleIdentifier"] as? String ?? url.standardizedFileURL.path
                 guard seen.insert(key).inserted else { continue }
 
                 apps.append(LaunchApp(
                     id: key,
-                    name: displayName(for: url, bundle: bundle, languageCode: languageCode),
+                    name: displayName(for: url, info: info, languageCode: languageCode),
                     path: url.path
                 ))
             }
@@ -51,21 +59,22 @@ public enum AppCatalog {
     }
 
     public static func displayName(for url: URL, bundle: Bundle? = nil, languageCode: String? = nil) -> String {
-        // Explicit language: read the app's <lang>.lproj/InfoPlist.strings, else fall back to
-        // the base (development-language) name — exactly how macOS shows unlocalized apps.
+        if languageCode == nil {
+            for code in Locale.preferredLanguages {
+                if let localized = localizedName(for: url, languageCode: code) { return localized }
+            }
+        }
+        return displayName(for: url, info: bundle?.localizedInfoDictionary ?? bundle?.infoDictionary, languageCode: languageCode)
+    }
+
+    private static func displayName(for url: URL, info: [String: Any]?, languageCode: String?) -> String {
         if let code = languageCode {
             if let localized = localizedName(for: url, languageCode: code) { return localized }
-            let info = bundle?.infoDictionary
             return info?["CFBundleDisplayName"] as? String
                 ?? info?["CFBundleName"] as? String
                 ?? url.deletingPathExtension().lastPathComponent
         }
 
-        // System language.
-        for code in Locale.preferredLanguages {
-            if let localized = localizedName(for: url, languageCode: code) { return localized }
-        }
-        let info = bundle?.localizedInfoDictionary ?? bundle?.infoDictionary
         return info?["CFBundleDisplayName"] as? String
             ?? info?["CFBundleName"] as? String
             ?? url.deletingPathExtension().lastPathComponent
@@ -95,6 +104,10 @@ public enum AppCatalog {
             }
         }
         return nil
+    }
+
+    private static func infoDictionary(for url: URL) -> [String: Any]? {
+        NSDictionary(contentsOf: url.appendingPathComponent("Contents/Info.plist")) as? [String: Any]
     }
 
     /// `.lproj` directory names to try for a language (e.g. "ko" → ["ko", "ko-KR"]).

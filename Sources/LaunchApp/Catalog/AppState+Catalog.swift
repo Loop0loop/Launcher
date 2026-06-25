@@ -12,14 +12,16 @@ extension AppState {
     func refreshAppsAsync(priority: TaskPriority = .userInitiated, delay: TimeInterval = 0) {
         catalogRefreshTask?.cancel()
         let extraRoots = appSourcePaths
-        let languageCode = Localized.code
+        let languageCode = appLanguage.localeCode
         catalogRefreshTask = Task {
             if delay > 0 {
                 try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
             }
             guard !Task.isCancelled else { return }
             let scanned = await Task.detached(priority: priority) {
-                CatalogStore.scanApps(extraRoots: extraRoots, languageCode: languageCode)
+                CatalogStore.scanApps(extraRoots: extraRoots, languageCode: languageCode) {
+                    Task.isCancelled
+                }
             }.value
             guard !Task.isCancelled else { return }
             applyScannedApps(scanned)
@@ -27,6 +29,7 @@ extension AppState {
     }
 
     private func applyScannedApps(_ scannedApps: [LaunchApp]) {
+        guard scannedApps != apps else { return }
         CatalogStore.saveCachedApps(scannedApps)
         apps = scannedApps
         let cleanup = LayoutStore.cleanup(folders: folders, order: order, validAppIDs: Set(apps.map(\.id)))

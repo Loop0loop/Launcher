@@ -89,6 +89,7 @@ git push origin v0.1.2
 ```
 
 The workflow sets `CFBundleShortVersionString` from the tag (`v0.1.2` -> `0.1.2`) and uses the GitHub run number for `CFBundleVersion`.
+It also signs the DMG with Sparkle's EdDSA key and pushes `appcast.xml` to `main`.
 
 Required repository secrets:
 
@@ -99,6 +100,8 @@ LAUNCH_SIGN_IDENTITY           # Developer ID Application: Name (TEAMID)
 APPLE_ID                       # Apple Developer account email
 APPLE_APP_SPECIFIC_PASSWORD    # app-specific password for notarytool
 APPLE_TEAM_ID                  # Apple Developer team id
+SPARKLE_PUBLIC_ED_KEY          # public EdDSA key embedded in Info.plist
+SPARKLE_PRIVATE_ED_KEY         # private EdDSA key used to sign appcast entries
 ```
 
 Optional:

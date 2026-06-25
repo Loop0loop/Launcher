@@ -10,11 +10,8 @@ extension AppDelegate {
     }
 
     private func handleShowSettings() {
-        if launcherLifecycle?.isVisible == true {
-            launcherLifecycle?.dismiss()
-        }
-        trackpadMonitor.stop()
-        state.setTrackpadGateActive(false)
+        // Settings floats above the launcher instead of dismissing it, and the trackpad
+        // monitor keeps running so the launcher can still be opened while Settings is up.
         state.refreshAccessibilityStatus()
         state.refreshLoginItemStatus()
 
@@ -37,7 +34,9 @@ extension AppDelegate {
             window.hasShadow = true
             window.isFloatingPanel = true
             window.becomesKeyOnlyIfNeeded = false
-            window.level = .floating
+            // Above the launcher (which sits at .screenSaver) so Settings stays on top
+            // even when the launcher is reopened behind it.
+            window.level = NSWindow.Level(rawValue: NSWindow.Level.screenSaver.rawValue + 1)
             window.delegate = self
             let hosting = NSHostingView(rootView: SettingsView(state: state))
             hosting.safeAreaRegions = []

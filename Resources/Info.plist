@@ -21,8 +21,8 @@
     <key>LSUIElement</key>
     <true/>
     <key>SUFeedURL</key>
-    <string>https://raw.githubusercontent.com/Loop0loop/Launcher/main/appcast.xml</string>
+    <string>https://raw.githubusercontent.com/Loop0loop/Finder/main/appcast.xml</string>
     <key>SUPublicEDKey</key>
-    <string>REPLACE_WITH_SPARKLE_PUBLIC_ED_KEY</string>
+    <string>X/180O/1PlcTrg5wGzsgHNPOjOrIwTKb5GMnlR2qnJQ=</string>
 </dict>
 </plist>

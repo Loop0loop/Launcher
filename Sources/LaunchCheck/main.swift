@@ -25,6 +25,24 @@ if Locale.preferredLanguages.first?.hasPrefix("ko") == true {
 let missing = URL(fileURLWithPath: "/tmp/launch-missing-\(UUID().uuidString)")
 assert(AppCatalog.scan(roots: [missing]).isEmpty)
 
+let scanRoot = FileManager.default.temporaryDirectory
+    .appendingPathComponent("LaunchpadCheck-\(UUID().uuidString)")
+let scanApp = scanRoot.appendingPathComponent("Scanned App.app")
+try FileManager.default.createDirectory(
+    at: scanApp.appendingPathComponent("Contents"),
+    withIntermediateDirectories: true
+)
+NSDictionary(dictionary: [
+    "CFBundleIdentifier": "com.example.scanned",
+    "CFBundleName": "Scanned Name"
+]).write(to: scanApp.appendingPathComponent("Contents/Info.plist"), atomically: true)
+let scannedApps = AppCatalog.scan(roots: [scanRoot], languageCode: "en")
+assert(scannedApps.count == 1)
+assert(scannedApps[0].id == "com.example.scanned")
+assert(scannedApps[0].name == "Scanned Name")
+assert(scannedApps[0].path.hasSuffix("/Scanned App.app"))
+assert(AppCatalog.scan(roots: [scanRoot], isCancelled: { true }).isEmpty)
+
 let apps = [
     LaunchApp(id: "a", name: "A", path: "/A.app"),
     LaunchApp(id: "b", name: "B", path: "/B.app"),

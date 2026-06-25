@@ -91,6 +91,13 @@ final class LauncherMouseMonitor {
 
     private func dragged(_ event: NSEvent, _ state: AppState) -> NSEvent? {
         if state.isDraggingLauncherItem {
+            // An item drag took over a press that began as page-swipe tracking. Drop the
+            // page swipe so releasing the icon doesn't also fire a page change.
+            if tracking {
+                tracking = false
+                dragOffset = 0
+                state.pageDragOffset = 0
+            }
             guard let window = self.window else { return event }
             let x = event.locationInWindow.x
             let w = window.frame.width
