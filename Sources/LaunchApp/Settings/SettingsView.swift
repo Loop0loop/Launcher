@@ -218,6 +218,11 @@ struct SettingsView: View {
                 SettingsStatusRow(title: LaunchConstants.Settings.trackpad, status: state.trackpadGateState.label, positive: state.trackpadGateState == .exactPinch)
                 SettingsStatusRow(title: LaunchConstants.Settings.globalHotKey, status: state.globalHotKeyState.label, positive: state.globalHotKeyState == .allowed)
                 SettingsStatusRow(title: LaunchConstants.Settings.f4Key, status: state.f4KeyState.label, positive: state.f4KeyState == .allowed)
+                SettingsStatusRow(
+                    title: Localized.t("핫 코너", "Hot Corner"),
+                    status: state.hotCornerSetting == "Disabled" ? "Disabled" : state.hotCornerSetting,
+                    positive: state.hotCornerSetting != "Disabled"
+                )
                 if state.accessibilityState != .allowed {
                     SettingsActionRow(title: LaunchConstants.Settings.requestAccessibility) { state.requestAccessibilityPermission() }
                 }

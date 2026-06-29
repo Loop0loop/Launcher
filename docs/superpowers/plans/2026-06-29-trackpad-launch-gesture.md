@@ -178,15 +178,15 @@ Expected: pinch, scroll, page swipe, and contact-quality assertions pass.
 - Modify: `Sources/LaunchApp/AppDelegate/AppDelegate+Input.swift`
 - Modify: `Sources/LaunchApp/Settings/SettingsView.swift`
 
-- [ ] **Step 1: Confirm F4 opens and closes our launcher**
+- [x] **Step 1: Confirm F4 opens and closes our launcher**
 
 Use the existing global hotkey adapter. If F4 is not captured on this machine, add a small Carbon `RegisterEventHotKey` fallback in `LaunchApp`.
 
-- [ ] **Step 2: Confirm hot corner opens our launcher**
+- [x] **Step 2: Confirm hot corner opens our launcher**
 
 Hot corner should be independently testable and should not depend on trackpad permissions.
 
-- [ ] **Step 3: Make settings copy honest**
+- [x] **Step 3: Make settings copy honest**
 
 Use wording that makes trackpad optional:
 
