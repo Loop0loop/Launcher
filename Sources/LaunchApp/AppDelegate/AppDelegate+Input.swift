@@ -37,6 +37,10 @@ extension AppDelegate {
                 LaunchLog.line("trackpad intent blocked cooldown")
                 return
             }
+            guard !state.isHandlingLauncherDrag else {
+                LaunchLog.line("trackpad intent=\(intent) ignored during drag")
+                return
+            }
             switch intent {
             case .open:
                 guard launcherLifecycle?.isVisible != true else { return }
@@ -69,7 +73,7 @@ extension AppDelegate {
     }
 
     private func changePageFromTrackpad(_ delta: Int, intent: TrackpadIntent, ignoredLog: String) {
-        if launcherLifecycle?.isVisible == true, !state.isDraggingLauncherItem {
+        if launcherLifecycle?.isVisible == true, !state.isHandlingLauncherDrag {
             let oldPage = state.currentPage
             withAnimation(LaunchConstants.Animation.pageSnap) {
                 state.changePage(delta)
@@ -77,7 +81,7 @@ extension AppDelegate {
             if state.currentPage != oldPage {
                 LaunchLog.line("trackpad intent=\(intent)")
             }
-        } else if state.isDraggingLauncherItem {
+        } else if state.isHandlingLauncherDrag {
             LaunchLog.line(ignoredLog)
         }
     }

@@ -149,15 +149,15 @@ Expected: build succeeds and each defaults read returns `0` or the key is absent
 - Modify: `Sources/LaunchCore/TrackpadIntent.swift`
 - Modify: `Sources/LaunchCheck/main.swift`
 
-- [ ] **Step 1: Support multiple finger counts**
+- [x] **Step 1: Support multiple finger counts**
 
 The monitor should accept the resolved finger list, prefer higher counts first, and fall back to 3-finger when automatic mode includes both `[3, 4]`.
 
-- [ ] **Step 2: Do not trigger while drag state is active**
+- [x] **Step 2: Do not trigger while drag state is active**
 
 Trackpad open/close/page intent must not fire while root icon drag, folder drag, folder creation, folder pull-out, or page drag is active.
 
-- [ ] **Step 3: Verify intent rules**
+- [x] **Step 3: Verify intent rules**
 
 Run:
 

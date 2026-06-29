@@ -34,6 +34,16 @@ enum DragIntent {
 
 extension AppState {
     var isDraggingLauncherItem: Bool { draggingItemID != nil }
+    var isHandlingLauncherDrag: Bool {
+        isDraggingLauncherItem
+            || folderReorderingID != nil
+            || folderDragPullingOut
+            || folderPullOutAppID != nil
+            || folderDragInsertionIndex != nil
+            || folderCreationAnimationID != nil
+            || abs(pageDragOffset) > 0.5
+    }
+
     var draggingApp: LaunchApp? { draggingItemID.flatMap(appByID) }
     var draggingLauncherItem: LauncherItem? {
         guard let draggingItemID else { return nil }
