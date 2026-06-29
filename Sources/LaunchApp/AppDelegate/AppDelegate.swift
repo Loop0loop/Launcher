@@ -64,11 +64,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
         )
         window.hidesOnDeactivate = false
         window.isFloatingPanel = false
-        let presentationContainer = LauncherPresentationContainer()
-        presentationContainer.wantsLayer = true
-        launcherContainer = presentationContainer
-
-        window.contentView = presentationContainer
+        window.contentView = makeLauncherContainer()
         window.acceptsMouseMovedEvents = true
         window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         window.isOpaque = false
@@ -100,7 +96,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
 
     private func setLauncherRoot(active: Bool) {
         if active {
-            guard launcherHostingView == nil, let launcherContainer else { return }
+            let launcherContainer = ensureLauncherContainer()
+            guard launcherHostingView == nil else { return }
             let root = LauncherView(state: state)
                 .environmentObject(iconCache)
                 .environmentObject(state.drag)
@@ -114,6 +111,22 @@ public final class AppDelegate: NSObject, NSApplicationDelegate, NSWindowDelegat
             launcherHostingView?.rootView = AnyView(EmptyView())
             launcherHostingView?.removeFromSuperview()
             launcherHostingView = nil
+            launcherContainer = nil
+            window?.contentView = nil
         }
+    }
+
+    private func makeLauncherContainer() -> LauncherPresentationContainer {
+        let presentationContainer = LauncherPresentationContainer()
+        presentationContainer.wantsLayer = true
+        launcherContainer = presentationContainer
+        return presentationContainer
+    }
+
+    private func ensureLauncherContainer() -> LauncherPresentationContainer {
+        if let launcherContainer { return launcherContainer }
+        let presentationContainer = makeLauncherContainer()
+        window?.contentView = presentationContainer
+        return presentationContainer
     }
 }

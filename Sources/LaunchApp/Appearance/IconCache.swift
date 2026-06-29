@@ -101,7 +101,9 @@ final class IconCache: ObservableObject {
             kCGImageSourceThumbnailMaxPixelSize: px
         ]
         guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
-        return NSImage(cgImage: cgImage, size: NSSize(width: size, height: size))
+        let image = NSImage(cgImage: cgImage, size: NSSize(width: size, height: size))
+        image.cacheMode = .never
+        return image
     }
 
     private nonisolated static func rasterized(_ image: NSImage, size: CGFloat) -> NSImage? {
@@ -126,6 +128,7 @@ final class IconCache: ObservableObject {
 
         let result = NSImage(size: NSSize(width: size, height: size))
         result.addRepresentation(rep)
+        result.cacheMode = .never
         return result
     }
 

@@ -189,6 +189,11 @@ final class LauncherLifecycle {
         setPresentationScale(1)
     }
 
+    private func releasePresentationLayer() {
+        guard let container = window.contentView as? LauncherPresentationContainer else { return }
+        container.wantsLayer = false
+    }
+
     private func completeHide(activatePrevious: Bool) {
         phase = .hidden
         state.launcherVisible = false
@@ -197,6 +202,7 @@ final class LauncherLifecycle {
         window.orderOut(nil)
         resetPresentation()
         state.actions.releaseLauncherRoot()
+        releasePresentationLayer()
         if activatePrevious { activatePreviousApp() }
     }
 
