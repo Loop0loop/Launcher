@@ -1,12 +1,15 @@
-<?xml version="1.0" encoding="utf-8" standalone="yes"?><!-- sparkle-sign-warning:
-IMPORTANT: This file was signed by Sparkle. Any modifications to this file requires re-signing this file with generate_appcast or sign_update! The signed signature will be embedded at the end of this file.
---><rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
   <channel>
     <title>Launchpad Updates</title>
-    <link>https://github.com/Loop0loop/Launcher</link>
+    <link>https://github.com/Loop0loop/Launchpad</link>
     <description>Launchpad app updates.</description>
+    <item>
+      <title>Launchpad 0.3.2</title>
+      <sparkle:version>23</sparkle:version>
+      <sparkle:shortVersionString>0.3.2</sparkle:shortVersionString>
+      <pubDate>Mon, 29 Jun 2026 04:18:41 +0000</pubDate>
+      <enclosure url="https://github.com/Loop0loop/Launchpad/releases/download/v0.3.2/Launchpad-0.3.2.dmg" sparkle:edSignature="Zq2LwGYW4d3uH1RCJta/CtfyAdKrEWvFs6LEPFoTPXhfk6e8qoZEps0bqcVrLJ+DsbkirtNcLsF2Sv8Cci4CAg==" length="3778856" type="application/octet-stream" />
+    </item>
   </channel>
-</rss><!-- sparkle-signatures:
-edSignature: xYyXBjecWzk8E89K/vPXuCeXjzbzgBw9dItM5f+ab+GueT9XoBLlXKOWp828z2h+InNCY6iqLOe+wIpQmrrbBA==
-length: 556
--->
+</rss>
